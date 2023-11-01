@@ -1,0 +1,41 @@
+---
+title: "Assignment 2"
+author: "Iris van Engen, Sara Claus, Caspar Bannink, Wessel ??"
+output: html_document
+date: "2023-10-25"
+---
+
+Libraries:
+```{r}
+library(ggplot2)
+library(tidyverse)
+```
+
+
+# Introducing the dataset
+To do:  
+- choose a dataset  
+- clean dataset
+- explain dataset
+- introduce what question we want to answer (so what is the dependent variable and are the independent variables)
+
+# Representing the data
+Content: make few interesting plots
+
+# Simple model
+To do: 
+- Make a simple model
+- Explain model method (linear regression?)
+- Create confusion matrix 
+- Explain de predictions (which are the truly true, falsly true etc)
+- Evaluate the performance of the model
+
+```{r}
+# Function measuring the performance of the model
+```
+
+
+
+
+
+

@@ -1,0 +1,196 @@
+library(tidyverse)
+library(ggpubr)
+library(magrittr)
+library(psych)
+library(caret)
+library(gbm)
+library(xgboost)
+library(data.table)
+library(ggforce)
+set.seed(45)
+df <- readRDS("data-3/train_disease.RDS")
+str(df)
+df %>% group_by(Disease) %>% summarise(med_age = median(Age),
+                                       med_Tbil = median(Total_Bilirubin),
+                                       med_Dbil = median(Direct_Bilirubin),
+                                       med_AlPho = median(Alkaline_Phosphotase),
+                                       med_Alam = median(Alamine_Aminotransferase),
+                                       med_Aspa = median(Aspartate_Aminotransferase),
+                                       med_Tprot = median(Total_Protiens),
+                                       med_Albu = median(Albumin),
+                                       med_Ratio = median(Ratio_Albumin_Globulin)
+                                      )
+# There are more healthy older people than young people in this dataset.
+
+pl1 <- df %>% ggplot(aes(y = Age ))+ 
+  geom_boxplot(fill = "sea green")+ 
+  facet_wrap(df$Disease, ncol = 2)+
+  labs(ylab = "Age")+
+  ggtitle("Age distribution")+
+  theme_minimal()
+
+pl2 <- df %>% ggplot(aes(y = Alkaline_Phosphotase ))+ 
+  geom_boxplot(fill = "sea green")+ 
+  facet_wrap(df$Disease, ncol = 2)+
+  labs(ylab = "Alkaline Phosphotase")+
+  ggtitle("Alkaline Phosphatase distribution")+
+  theme_minimal()
+
+pl3 <- df %>% ggplot(aes(y = Alamine_Aminotransferase ))+ 
+  geom_boxplot(fill = "sea green")+ 
+  facet_wrap(df$Disease, ncol = 2)+
+  labs(ylab = "Alamine_Aminotransferase")+
+  ggtitle("Alamine_Aminotransferase distribution")+
+  theme_minimal()
+
+pl4 <- df %>% ggplot(aes(y = Aspartate_Aminotransferase ))+ 
+  geom_boxplot(fill = "sea green")+ 
+  facet_wrap(df$Disease, ncol = 2)+
+  labs(ylab = "Aspartate_Aminotransferase")+
+  ggtitle("Aspartate_Aminotransferase distribution")+
+  theme_minimal()
+
+pl5 <- df %>% ggplot(aes(y = Albumin ))+ 
+  geom_boxplot(fill = "sea green")+ 
+  facet_wrap(df$Disease, ncol = 2)+
+  labs(ylab = "Albumin")+
+  ggtitle("Albumin distribution")+
+  theme_minimal()
+
+pl6 <- df %>% ggplot(aes(y = Total_Bilirubin ))+ 
+  geom_boxplot(fill = "sea green")+ 
+  facet_wrap(df$Disease, ncol = 2)+
+  labs(ylab = "Total_Bilirubin")+
+  ggtitle("Total_Bilirubin distribution")+
+  theme_minimal()
+
+pl7 <- df %>% ggplot(aes(y = Direct_Bilirubin ))+ 
+  geom_boxplot(fill = "sea green")+ 
+  facet_wrap(df$Disease, ncol = 2)+
+  labs(ylab = "Direct_Bilirubin")+
+  ggtitle("Direct_Bilirubin distribution")+
+  theme_minimal()
+
+pl8 <- df %>% ggplot(aes(y = Total_Protiens ))+ 
+  geom_boxplot(fill = "sea green")+ 
+  facet_wrap(df$Disease, ncol = 2)+
+  labs(ylab = "Total_Protiens")+
+  ggtitle("Total_Protiens distribution")+
+  theme_minimal()
+
+fig1 <- ggarrange(pl1,pl2,pl3,pl4,pl5,pl6,pl7,pl8, labels = c("A","B","C","D","E","F","G","H"), ncol = 4, nrow = 2)
+
+annotate_figure(fig1, top = text_grob("Boxplots of liver disease parameters",color = "black", face = "bold", size = 14),
+                fig.lab = "Figure 1", fig.lab.face = "bold")
+
+df %>% ggplot(aes(x = Aspartate_Aminotransferase, y = Alamine_Aminotransferase, color = Disease))+
+  geom_point(alpha = 0.5)+
+  xlim(0,1000)+
+  ylim(0,500)+
+  theme_minimal()
+
+#Exercise 3 
+##Bagging stands for bootstrap aggregation. It makes n number of new training sets and makes a 
+# tree for each training set. The final tree is the average of the forest of trees collected. 
+## RandomForest is the same proces as bagging but also selects for a selection of features. This resolves for bias caused by some 
+# features. 
+##Boosting is the process of making a multiple itterations where a hyperplane is assigned and misclassified datapoints get a weight attached. 
+#This is done to make sure they are taken account for in the next hyperplane. Depending on the set number of hyperplanes, 
+#the boosting process will continue. 
+
+#Exercise 4 
+cvcontrol <- trainControl(method = "repeatedcv",
+                          number = 10,
+                          allowParallel = TRUE)
+
+bagged_df <- train(Disease ~ .,
+                  data = df,
+                  method ="treebag",
+                  trControl = cvcontrol, 
+                  importance = TRUE)
+                    
+   
+#Exercise 5 
+##varImp() shows the importance of each feature on their status. 
+bagged_df %>% 
+  varImp() %>% 
+  plot
+
+#Exercise 6
+confusionMatrix(predict(bagged_df, type = "raw"), df$Disease)
+
+#Exercise 7 
+bagged_df
+
+#Exercise 8 
+ran_forest <- train(Disease ~., 
+                    data = df, 
+                    method = "parRF",
+                    trControl = cvcontrol, 
+                    importance = TRUE)
+                    
+ran_forest %>% 
+  varImp %>% 
+  plot
+#Exercise 10
+confusionMatrix(predict(ran_forest, type = "raw"), df$Disease)
+ran_forest
+
+#Exercise 11
+gbm_train <- train(Disease ~ .,
+                   data = df, 
+                   method = "gbm",
+                   verbose = F,
+                   trControl = cvcontrol)
+summary(gbm_train)
+#Exercise 13 
+gbm_train
+# the accuracy of boosting is slightly better than the other models. 
+
+#Exercise 14 
+library(devtools)
+source_url("https://github.com/pablo14/shap-values/blob/master/shap.R?raw=TRUE")
+
+train_x <- model.matrix(Disease ~ ., df)[,-1]
+train_y <- as.numeric(df$Disease) - 1
+xgboost_train <- xgboost (data = train_x,
+                          label = train_y,
+                          max.depth = 10, 
+                          eta = 1, 
+                          nthread = 4, 
+                          nrounds = 4, 
+                          objective = "binary:logistic",
+                          verbose = 2)
+
+pred <- tibble(Disease = predict(xgboost_train,newdata =train_x)) %>% 
+  mutate(Disease = factor(ifelse(Disease <0.5, 1, 2),
+                          labels = c("Healthy", "Disease")))
+table(pred$Disease, df$Disease)
+
+shap_results <- shap.score.rank(xgboost_train,
+                                X_train = train_x,
+                                shap_approx = F)
+var_importance(shap_results)
+
+#Exercise 17 
+shap_long <-  shap.prep(shap = shap_results,
+                        X_train = train_x)
+plot.shap.summary(shap_long)
+
+xgb.plot.shap(train_x, features = colnames(train_x), model = xgboost_train, ncol = 3)
+
+#Exercise 18 
+df.test <- readRDS("data-3/test_disease.RDS")
+bag_test <- predict(bagged_df, newdata = df.test)
+rf_test <- predict(ran_forest, newdata = df.test)
+gbm_test <- predict(gbm_train, newdata = df.test)
+xgb_test <- predict(xgboost_train, newdata = model.matrix(Disease ~ ., df.test)[,-1]) %>% 
+  factor(x = ifelse(. < 0.5, 1, 2), levels = c(1,2), labels = c("Healthy","Disease"))
+
+list(bag_test,
+     rf_test,
+     gbm_test,
+     xgb_test) %>% 
+  map(~ confusionMatrix(.x,df.test$Disease))
+
+# bagging was the best method!

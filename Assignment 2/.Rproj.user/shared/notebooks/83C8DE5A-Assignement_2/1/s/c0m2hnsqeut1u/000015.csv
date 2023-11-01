@@ -1,0 +1,13 @@
+"0","white_wine <- white_wine %>% 
+  mutate(group = ifelse(quality < 5, ""Bad"", ifelse(quality <8, ""Neutral"", ""Good""))) %>% 
+  mutate(group = ordered(group, levels = c(""Bad"",""Neutral"",""Good""))) %>% 
+  select(!(white_wine$quality))
+"
+"1","[1m[33mError[39m in `select()`:[22m
+[33m![39m Can't subset columns past the end.
+[38;5;232m[36mℹ[38;5;232m Locations 7, 7, 8, …, 7, and 7 don't exist.
+[36mℹ[38;5;232m There are only 6 columns.[39m
+Backtrace:
+[90m 1. [39m... %>% select(!(white_wine$quality))
+[90m 3. [39m[1m[94mdplyr:::select.data.frame([39m[22m., !(white_wine$quality)[1m[94m)[39m[22m
+"

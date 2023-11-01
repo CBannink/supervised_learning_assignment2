@@ -1,0 +1,31 @@
+"0","library(ggplot2)"
+"0","library(tidyverse) "
+"0","library(viridis)"
+"0","library(ggpubr)"
+"0","library(rpart)"
+"0","library(psych)"
+"0","library(rpart.plot)"
+"0","library(randomForest)"
+"2","randomForest 4.7-1.1
+"
+"2","Type rfNews() to see new features/changes/bug fixes.
+"
+"2","
+Attaching package: ‘randomForest’
+
+"
+"2","The following object is masked from ‘package:psych’:
+
+    outlier
+
+"
+"2","The following object is masked from ‘package:dplyr’:
+
+    combine
+
+"
+"2","The following object is masked from ‘package:ggplot2’:
+
+    margin
+
+"

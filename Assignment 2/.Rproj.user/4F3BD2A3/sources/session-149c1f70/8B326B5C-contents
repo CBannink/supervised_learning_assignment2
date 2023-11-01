@@ -1,0 +1,119 @@
+library(MASS)
+library(splines)
+library(tidyverse)
+library(ISLR)
+library(ggpubr)
+set.seed(45)
+Boston %>% 
+  ggplot(aes( x= lstat, y = medv)) + 
+  geom_point() + 
+  theme_minimal()
+#Exercise 1 
+pred_plot <- function(lm,data){
+  xPred <- seq(min(data$lstat), max(data$lstat), length.out = 506)
+  yPred <- predict(lm, newdata = tibble(lstat = xPred))
+  
+  Boston %>% 
+    ggplot(aes(x = lstat, y = medv)) + 
+    geom_point()+ 
+    geom_line(data = tibble(lstat = xPred, medv = yPred), size = 1, col = "blue")+
+    theme_minimal()
+}
+#Exercise 2 
+lin_mod <- lm(medv~lstat, Boston)
+pred_plot(lin_mod, Boston)
+
+#Exercise 3 
+pn3_mod <- lm(medv ~ lstat + I(lstat^2) + I(lstat^3), data = Boston)
+pred_plot(pn3_mod,Boston)
+#Exercise 4 
+poly(1:5, degree = 3, raw = TRUE)
+poly(1:5, degree = 3)
+
+#Exercise 5 
+pn3_mod2 <- lm(medv~ poly(lstat, degree = 3, raw = TRUE), data = Boston)
+pred_plot(pn3_mod2,Boston)
+pn3_mod3 <- lm(medv~ poly(lstat, degree = 3, raw = FALSE), data = Boston)
+
+#Exercise 6 
+pw2_mod <- lm(medv ~ I(lstat <= median(lstat)), data = Boston)
+pred_plot(pw2_mod,Boston)
+#Low stat MEDV value
+coef(pw2_mod)[1] + coef(pw2_mod)[2]
+
+#Exercise 7 
+pw3_mod <- lm(medv ~ cut(lstat, 5), data = Boston)
+pred_plot(pw3_mod,Boston)
+
+#Exercise 8 
+brks <- c(-Inf, quantile(Boston$lstat, probs = c(.2, .4, .6, .8)), Inf)
+pwq_mod <- lm(medv ~ cut(lstat, brks), data = Boston)
+pred_plot(pwq_mod,Boston)
+
+#Exercise 9 
+piecewise_cubic_basis <- function(vec, knots = 1) {
+  if (knots == 0) return(poly(vec, degree = 3, raw = TRUE)) # if knots is zero, there 
+# are no steps to make for piecewise polynomial. A regular polynomial is made.
+  
+  cut_vec <- cut(vec, breaks = knots + 1) #this line is there to split the vector in 
+# any number of breaks.
+  
+  out <- matrix(nrow =length(vec), ncol = 0) # creates a matrix with rows of length vec
+  
+  #Loops over the levels of cut_vec
+  for (lvl in levels(cut_vec)) { 
+    #Temporary vector
+    tmp <- vec
+    
+    # Set all values to 0 except the current section
+    tmp[cut_vec != lvl] <- 0
+    
+    #add the polynomial based on this vector to the matrix
+    out <- cbind(out, poly(tmp, degree = 3, raw = TRUE))
+  }
+  # return the piecewise polynomial matrix
+  out
+}
+
+#Exercise 10 
+pc1_mod <- lm(medv ~ piecewise_cubic_basis(lstat, 1), data = Boston)
+pc2_mod <- lm(medv ~ piecewise_cubic_basis(lstat, 2), data = Boston)
+pc3_mod <- lm(medv ~ piecewise_cubic_basis(lstat, 1), data = Boston)
+pl1 <- pred_plot(pc1_mod,Boston)
+pl2 <- pred_plot(pc2_mod,Boston)
+pl3 <- pred_plot(pc3_mod,Boston)
+
+fig1 <- ggarrange(pl1,pl2,pl3, labels = c("pc1", "pc2", "pc3"), 
+          ncol = 1, nrow = 3)
+annotate_figure(fig1, 
+                top = text_grob("piecewise models", color = "black", face = "bold", size = 14))
+
+#Exercise 11 
+boston_tbp <- tibble(medv = Boston$medv,
+                     lstat = Boston$lstat)
+#Exercise 12
+boston_tbp <- boston_tbp %>% 
+  mutate(lstat_sq = lstat^2,
+         lstat_cu = lstat^3)
+#Exercise 13
+boston_tbp <- boston_tbp %>% 
+  mutate(lstat_tbp = ifelse(lstat < median(lstat), 0, (lstat - median(lstat))^3))
+
+#Exercise 14
+tbp_mod <- lm(medv~ lstat + lstat_sq + lstat_cu + lstat_tbp, data = boston_tbp)
+ summary(tbp_mod)
+
+# this model has four predictors and 501 degrees of freedom
+predict(tbp_mod)
+#Exercise 15 
+bs1_mod <- lm(medv ~ bs(lstat, df = 4, degree = 3), data = boston_tbp)
+pred_plot(tbp_mod,boston_tbp)
+pred_plot(bs1_mod,Boston)
+
+#Exercise 17 
+ns3_mod <- lm(medv ~ ns(lstat, df = 4), data = boston_tbp)
+pred_plot(ns3_mod,boston_tbp)
+
+
+
+

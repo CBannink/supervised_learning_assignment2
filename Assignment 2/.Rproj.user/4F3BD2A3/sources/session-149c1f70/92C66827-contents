@@ -1,0 +1,227 @@
+library(MASS)
+library(ISLR)
+library(tidyverse)
+library(pROC)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+library(ggpubr)
+library (GGally)
+library (rpart)
+library(rpart.plot)
+
+##Exercise 1 
+set.seed(45)
+CVDisease.df <- read_csv("data-2/cardiovascular_treatment.csv") %>% 
+  mutate(severity = as.factor(severity),
+         gender = as.factor(gender),
+         dose = as.factor(dose),
+         response = as.factor(response))
+  
+lr_mod <- glm(response~., data = CVDisease.df, family = "binomial")
+lr_pred <-predict(lr_mod, data = CVDisease.df, type = "response")
+conf_table1 <- table(true = CVDisease.df$response, Pred = ifelse(lr_pred > 0.5,1,0))
+
+##Exercise 2 
+conf_table1 %>% prop.table(2)
+#sensitivity is ..
+prop_tab <- conf_table1 %>% prop.table(2)
+prop_tab[1,1]
+#specificity is ..
+prop_tab[2,2]
+#The false positive rate ..
+1-prop_tab[2,2]
+# The positive predictive value .. 
+prop_tab1 <- conf_table1 %>% prop.table(1)
+prop_tab1[2,2]
+# The negative predictive value .. 
+prop_tab1[1,1]
+# The most useful metric would be a combination of PPV and NPV. These two metrics tell how well we can trust a prediction. Most
+# important is PPV since we want to give the treatment to people that will show a response and not waste it on people that do not benefit from a drug.
+tibble( sensitivity = prop_tab[1,1],
+        specificity = prop_tab[2,2],
+        FalsePositiveRate = 1-prop_tab[2,2],
+        PositivePredictiveValue = prop_tab1[2,2],
+        NegativePredictiveValue = prop_tab1[1,1])
+
+## Exercise 3 
+lda_mod <- lda(response~. , data = CVDisease.df)
+lda_pred <- predict(lda_mod, data = CVDisease.df, type = "Response")
+lda_table <- table(true = CVDisease.df$response, pred = lda_pred$class)
+
+lda_table %>% prop.table(2)
+#sensitivity is ..
+prop_lda <- lda_table %>% prop.table(2)
+prop_lda[1,1]
+#specificity is ..
+prop_lda[2,2]
+#The false positive rate ..
+1-prop_lda[2,2]
+# The positive predictive value .. 
+prop_lda1 <- lda_table %>% prop.table(1)
+prop_lda1[2,2]
+# The negative predictive value .. 
+prop_lda1[1,1]
+tibble( sensitivity = prop_lda[1,1],
+        specificity = prop_lda[2,2],
+        FalsePositiveRate = 1-prop_lda[2,2],
+        PositivePredictiveValue = prop_lda1[2,2],
+        NegativePredictiveValue = prop_lda1[1,1])
+# The lr_model performs better than the logistic model. 
+
+##Exercise 4 
+CVD_new <- read_csv("data-2/new_patients.csv") %>% 
+  mutate(severity = as.factor(severity),
+         gender = as.factor(gender),
+         response = as.factor(response),
+         dose = as.factor(dose))                             ### Why do I get an error for LR and not for LDA???
+lr_pred_new <- predict(lr_mod, newdata = CVD_new, type = "response")
+lr_outcome_new <- ifelse(lr_pred_new > 0.5, 1, 0)
+lr_table_new <- table(true = CVD_new$response, pred = ifelse(lr_pred_new > 0.5, 1, 0))
+
+lda_pred_new <- predict(lda_mod, newdata = CVD_new, type = "response")
+lda_table_new <- table(true = CVD_new$response, pred = lda_pred_new$class, )
+lda_table_new                      
+## For the new data there is only one False negative extra for LDA compared to LR. This is no means a reason to choose one above the other. 
+## LDA & LR work evenly good or bad for both. 
+#Exercise 4.2
+mean((lr_pred_new - (as.numeric(CVD_new$response)-1))^2) ### Why - 1?? 
+
+#Exercise 5
+lr_mod1 <- glm(response~ severity + age + bb_score, data = CVDisease.df, family = "binomial")
+lr_mod2 <- glm(response~ age + I(age^2) + gender + bb_score * prior_cvd *dose, data = CVDisease.df, family = "binomial")
+lr_pred1 <- predict(lr_mod1, data = CVDisease.df, type = "response")
+lr_pred2 <- predict(lr_mod2, data = CVDisease.df, type = "response")
+CVDisease.df <- CVDisease.df %>% mutate(lr1_pred = lr_pred1,
+                                        lr2_pred = lr_pred2)
+#Exercise 6 
+roc1 <- roc(CVDisease.df$response, lr_pred1)
+roc2 <- roc(CVDisease.df$response, lr_pred2)
+ggroc(roc1)
+ggroc(roc2)
+##model2 works better, since it makes more false positives with less false negatives. 
+
+#Exercise 7 
+roc1$auc>roc2$auc
+##False
+
+#Exercise 8 
+
+lda_iris <- lda(Species~., data = iris)
+first_id <- -c(as.matrix(iris[,-5]) %*% lda_iris$scaling[,1])
+
+tibble(
+  ld = first_id, 
+  Species = iris$Species
+) %>% 
+  ggplot(aes(x = ld, fill= Species)) + 
+  geom_histogram(binwidth = .5, position = "identity", alpha = .9)+ 
+  scale_fill_viridis_d(guide = )+ 
+  theme_minimal()+
+  labs(
+    x= "discriminant function", 
+    y = "frequency",
+    main = "Fisher's linear discriminant function on Iris species")+
+  theme(legend.position = "top")
+  
+ 
+Species_sum <- iris %>% group_by(Species) %>%
+  summarise(mean_SL = mean(Sepal.Length), 
+            mean_SW = mean(Sepal.Width), 
+            mean_PL = mean(Petal.Length),   
+            mean_PW = mean(Petal.Width))
+
+
+SepalWidth.plt <- iris %>% ggplot(aes(y = Sepal.Width, fill = Species))+ 
+  geom_boxplot()+
+  theme_minimal()
+SepalWidth.plt
+
+SepalWidth1.plt <- iris %>% ggplot(aes(x = Sepal.Width, color = Species))+
+  geom_density()+
+  geom_rug()+
+  theme_minimal()+
+  labs(
+    x = "sepal width",
+    y = "frequency", 
+    main = "")
+SepalLength1.plt <- iris %>% ggplot(aes(x = Sepal.Length, color = Species))+
+  geom_density()+
+  geom_rug()+
+  theme_minimal()+
+  labs(
+    x = "sepal length",
+    y = "frequency", 
+    main = "")
+PetalWidth1.plt <- iris %>% ggplot(aes(x = Petal.Width, color = Species))+
+  geom_density()+
+  geom_rug()+
+  theme_minimal()+
+  labs(
+    x = "petal width",
+    y = "frequency", 
+    main = "")
+PetalLength1.plt <- iris %>% ggplot(aes(x = Petal.Length, color = Species))+
+  geom_density()+
+  geom_rug()+
+  theme_minimal()+
+  labs(
+    x = "petal length",
+    y = "frequency", 
+    main = "")
+ggarrange(SepalLength1.plt,SepalWidth1.plt,PetalLength1.plt,PetalWidth1.plt,
+          labels = c("A","B","C","D"),
+          ncol = 2, nrow = 2)
+Species_sum
+
+ggpairs(iris,
+        columns = 1:4, 
+        aes(color = Species, 
+            alpha = .5))
+#Exercise 9 
+lda_iris_sepal <- lda(Species~ Sepal.Length + Sepal.Width, data = iris)
+lda_pred_iris_sepal <- predict(lda_iris_sepal, data = iris)
+lda_pred_iris <- predict(lda_iris, data = iris)
+
+#Exercise 10 
+table(true = iris$Species, predicted = lda_pred_iris_sepal$class)
+table(true = iris$Species, predicted = lda_pred_iris$class)
+
+#Exercise 11 
+iris_tree_mod <- rpart(Species~., data = iris)
+rpart.plot(iris_tree_mod)
+
+#Exercise 12 
+###Would be classified as versicolor
+
+#Exercise 13 
+tree.plt <- iris %>% ggplot(aes(x = Petal.Length, y = Petal.Width, color = Species))+ 
+  geom_point()+ 
+  geom_segment(aes(x = 2.5, y = 0, xend = 2.5, yend = Inf), color = "black")+
+  geom_segment(aes(x = 2.5, y = 1.79, xend = Inf, yend = 1.79), color = "black")+
+  labs( x = "Petal Length",
+        y = "Petal Width",
+        main = "Tree plot")+ 
+  scale_colour_viridis_d() +
+  theme_minimal()
+
+tree.plt
+## With the segments we make up the tree decision making for categorization. 
+
+#Exercise 14 
+E14_tree_mod <- rpart(Species~., data = iris,
+                      control = rpart.control(minbucket = 1, cp = 0))
+  
+rpart.plot(E14_tree_mod)
+# This model is to Biased, and will result in a lot of Variance in a new test dataset. 
+#Exercise 15 
+forest <- randomForest(iris)
+fore <- importance(forest)
+forest.imp <- tibble(var.type = rownames(fore),
+       var.impact = fore[,1])
+ggplot(data = forest.imp, aes(x = var.type, y = var.impact, fill = var.type))+
+  geom_bar(stat = "identity")+
+  theme_minimal()
+
+forest
+## Is their a measure of certainty for each prediction?

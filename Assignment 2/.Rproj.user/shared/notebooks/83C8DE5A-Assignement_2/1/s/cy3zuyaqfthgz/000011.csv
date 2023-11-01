@@ -1,0 +1,4 @@
+"0","# Importing datasets "
+"0","red_wine <- read.csv(""wine+quality/winequality-red.csv"", sep = "";"")"
+"0","white_wine <- read.csv(""wine+quality/winequality-white.csv"", sep = "";"")"
+"0","white_wine %>%  mutate(quality = as.factor(quality))"
