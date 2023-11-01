@@ -221,8 +221,12 @@ accurate would be hard and unnecessary. Therefore, we will make a model
 that is able to classify bad, neutral and good from eachother.
 
 ```{r}
-white_wine <- white_wine %>% 
+white_wine_duplicated <- white_wine %>% 
   mutate(group = ifelse(quality < 6, "Bad", "Good"))
+white_wine <- white_wine %>% 
+  mutate(group = ifelse(quality < 7, "Bad", "Good"))
+
+
 
 box_alc_1 <- white_wine %>% 
   ggplot(aes(y = alcohol))+ 
@@ -375,25 +379,75 @@ white_wine <- white_wine %>%
   select(!(quality)) 
 white_wine <- white_wine %>% 
   mutate(split = sample(c(rep("Test",490), rep("Train", 4408))))
+
+
+bad_indices <- which(white_wine_duplicated$group == "Bad")
+
+# Duplicate the "Bad" class instances
+duplicated_data <- white_wine_duplicated[bad_indices, ]
+
+# Combine the duplicated instances with the original dataset
+balanced_data <- rbind(white_wine_duplicated, duplicated_data)
+white_wine_duplicated = balanced_data
+white_wine_duplicated <- white_wine_duplicated %>% 
+  select(!(quality)) 
+white_wine_duplicated <- white_wine_duplicated %>% 
+  mutate(split = sample(c(rep("Test",653), rep("Train", 5885))))
+
+
 wwTrain <- white_wine %>% filter(split =="Train")
 wwTest <- white_wine %>% filter(split =="Test")
+wwTrain_duplicated <- white_wine_duplicated %>% filter(split =="Train")
+wwTest_duplicated <- white_wine_duplicated %>% filter(split =="Test")
 wwTrain = subset(wwTrain, select = -split)
 wwTest = subset(wwTest,select=-split)
+wwTrain_duplicated = subset(wwTrain_duplicated, select = -split)
+wwTest_duplicated = subset(wwTest_duplicated,select= -split)
+
+
 ncol_train = ncol(wwTrain)
+ncol_train_duplicated = ncol(wwTrain_duplicated)
+
 grid = expand.grid(mtry = c(ncol_train-1, sqrt(ncol_train), ncol_train/2))
 model <- train(group ~ ., data = wwTrain, method = "rf", trControl = trainControl(method = "repeatedcv", number=10, repeats = 3), tuneGrid =grid, metric="Accuracy")
+
+model_duplicated <- train(group ~ ., data = wwTrain_duplicated, method = "rf", trControl = trainControl(method = "repeatedcv", number=10, repeats = 3), tuneGrid =grid, metric="Accuracy")
+
 best_model <- model$finalModel
+best_model_duplicated = model_duplicated$finalModel
+
 predictions <- predict(best_model, wwTest)
+predictions_duplicated = predict(best_model_duplicated, wwTest_duplicated)
+
 accuracy <- mean(wwTest$group == predictions)
+accuracy_duplicated = mean(wwTest_duplicated$group == predictions_duplicated)
 accuracy
+accuracy_duplicated
+
+
 grid_simple = expand.grid(cp = c(0.01, 0.001, 1, 0.1))
 model_simple <- train(group ~ ., data = wwTrain, method = "rpart", trControl = trainControl(method = "repeatedcv",number = 10, repeats = 3,classProbs = FALSE), metric="Accuracy", tuneGrid = grid_simple)
+model_simple_duplicated <- train(group ~ ., data = wwTrain_duplicated, method = "rpart", trControl = trainControl(method = "repeatedcv",number = 10, repeats = 3,classProbs = FALSE), metric="Accuracy", tuneGrid = grid_simple)
+
 best_model_simple <- model_simple$finalModel
+best_model_simple_duplicated = model_simple_duplicated$finalModel
+
 predictions_simple <- predict(best_model_simple, wwTest)
 predictions_simple = data.frame(predictions_simple)
 result_df <- data.frame(matrix(ncol = 1, nrow = nrow(predictions_simple)))
 result_df$predicted_class <- ifelse(predictions_simple$Good >= 0.5, "Good", "Bad")# Assign classes based on the 
+
+predictions_simple_duplicated <- predict(best_model_simple_duplicated, wwTest_duplicated)
+predictions_simple_duplicated = data.frame(predictions_simple_duplicated)
+result_df_duplicated <- data.frame(matrix(ncol = 1, nrow = nrow(predictions_simple_duplicated)))
+result_df_duplicated$predicted_class <- ifelse(predictions_simple_duplicated$Good >= 0.5, "Good", "Bad")# Assign classes based on the
+
+
 accuracy_simple <- mean(wwTest$group == result_df$predicted_class)
+accuracy_simple_duplicated = mean(wwTest_duplicated$group ==result_df_duplicated$predicted_class )
 accuracy_simple
+accuracy_simple_duplicated
+best_model_simple
+best_model
 
 ```
