@@ -219,10 +219,8 @@ accurate would be hard and unnecessary. Therefore, we will make a model
 that is able to classify bad, neutral and good from eachother.
 
 ```{r}
-
 white_wine <- white_wine %>% 
-  mutate(group = ifelse(quality < 5, "Bad", ifelse(quality <8, "Neutral", "Good"))) %>% 
-  mutate(group = ordered(group, levels = c("Bad","Neutral","Good")))
+  mutate(group = ifelse(quality < 6, "Bad", "Good"))
 
 box_alc_1 <- white_wine %>% 
   ggplot(aes(y = alcohol))+ 
@@ -322,7 +320,11 @@ annotate_figure(fig2, top = text_grob("Boxplots of physiochemical properties of 
                 fig.lab = "Figure 1", fig.lab.face = "bold")
 
 ```
-Since it is not possible to pinpoint a single feature that highly influences the quality of white wine based on visualization, we want to check whether their are strong correlations between our groups. 
+
+Since it is not possible to pinpoint a single feature that highly
+influences the quality of white wine based on visualization, we want to
+check whether their are strong correlations between our groups.
+
 ```{r}
 cor(white_wine[,c(1:12)])
 
@@ -340,6 +342,7 @@ white_wine %>%
   facet_wrap(.~ group)
 
 ```
+
 ```{r}
 white_wine %>% 
   ggplot(aes(x = pH, y = citric.acid, color = quality))+ 
@@ -363,6 +366,7 @@ white_wine %>%
   theme_minimal()+ 
   facet_wrap(.~ group)
 ```
+
 ```{r}
 set.seed(123)
 white_wine <- white_wine %>% 
