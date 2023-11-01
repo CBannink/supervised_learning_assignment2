@@ -19,6 +19,8 @@ library(rpart)
 library(psych)
 library(rpart.plot)
 library(randomForest)
+library(magrittr)
+library(caret)
 ```
 
 # Introducing the dataset
@@ -375,7 +377,23 @@ white_wine <- white_wine %>%
   mutate(split = sample(c(rep("Test",490), rep("Train", 4408))))
 wwTrain <- white_wine %>% filter(split =="Train")
 wwTest <- white_wine %>% filter(split =="Test")
-  
-wineTree <- rpart(group ~ ., wwTrain, method = "class")
-rpart.plot(wineTree, box.palette = "Blues")
+wwTrain = subset(wwTrain, select = -split)
+wwTest = subset(wwTest,select=-split)
+ncol_train = ncol(wwTrain)
+grid = expand.grid(mtry = c(ncol_train-1, sqrt(ncol_train), ncol_train/2))
+model <- train(group ~ ., data = wwTrain, method = "rf", trControl = trainControl(method = "repeatedcv", number=10, repeats = 3), tuneGrid =grid, metric="Accuracy")
+best_model <- model$finalModel
+predictions <- predict(best_model, wwTest)
+accuracy <- mean(wwTest$group == predictions)
+accuracy
+grid_simple = expand.grid(cp = c(0.01, 0.001, 1, 0.1))
+model_simple <- train(group ~ ., data = wwTrain, method = "rpart", trControl = trainControl(method = "repeatedcv",number = 10, repeats = 3,classProbs = FALSE), metric="Accuracy", tuneGrid = grid_simple)
+best_model_simple <- model_simple$finalModel
+predictions_simple <- predict(best_model_simple, wwTest)
+predictions_simple = data.frame(predictions_simple)
+result_df <- data.frame(matrix(ncol = 1, nrow = nrow(predictions_simple)))
+result_df$predicted_class <- ifelse(predictions_simple$Good >= 0.5, "Good", "Bad")# Assign classes based on the 
+accuracy_simple <- mean(wwTest$group == result_df$predicted_class)
+accuracy_simple
+
 ```
