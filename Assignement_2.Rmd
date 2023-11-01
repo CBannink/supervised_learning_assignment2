@@ -1,0 +1,71 @@
+---
+title: "Assignment 2"
+author: "Iris van Engen, Sara Claus, Caspar Bannink, Wessel ??"
+output: html_document
+date: "2023-10-25"
+---
+
+Libraries:
+```{r}
+library(ggplot2)
+library(tidyverse)
+```
+
+
+# Introducing the dataset
+To do:  
+- choose a dataset  
+- clean dataset
+- explain dataset
+- introduce what question we want to answer (so what is the dependent variable and are the independent variables)
+
+# Representing the data
+Content: make few interesting plots
+
+# Simple model
+To do: 
+- Make a simple model
+- Explain model method (linear regression?)
+- Create confusion matrix 
+- Explain de predictions (which are the truly true, falsly true etc)
+- Evaluate the performance of the model
+- Interpret parameters and/or contribution of the features (what is the difference here?)
+
+```{r}
+# Function measuring the performance of the model (last two values are the most interesting!)
+
+model_performance = function(model_cm){
+  
+  TP <- model_cm[4]
+  TN <- model_cm[1]
+  FP <- model_cm[2]
+  FN <- model_cm[3]
+
+  ACC <- (TP+TN)/(TP+TN+FP+FN)
+  TPR <- TP/(TP+FN) # true positive rate OR sensitivity
+  TNR <- TN/(TN+FP) # true negative rate OR specificity
+  FPR <- FP/(FP+TN) # false positive rate
+  PPV <- TP/(TP+FP) # positive predicted value
+  NPV <- TN/(TN+FP) # negative predicted value
+  
+  performance <- c("ACC:", ACC, "TPR:", TPR, "TNR:", TNR, "FPR:", FPR, "PPV:", PPV, "NPV:", NPV)
+  
+  print(performance)
+}
+```
+
+# Complex model
+To do: 
+- Make a complex model
+- Explain model method (logistic regression, k-nearest neighbour, linear discriminant analysis, random Forest ?)
+- Create confusion matrix 
+- Explain de predictions (which are the truly true, falsly true etc)
+- Evaluate the performance of the model
+- Interpret parameters and/or contribution of the features (what is the difference here?)
+
+# Conclusion
+To do:
+- what do the models predict (answer the question we ask ourself at the beginning)
+- conclude which model is the best and why
+
+
