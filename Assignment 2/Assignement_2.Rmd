@@ -272,8 +272,8 @@ ncol_train_duplicated = ncol(wwTrain_duplicated)
 
 #complicated models first 2 random forest, train with gridsearch for best hyperparameter settings
 grid = expand.grid(mtry = c(ncol_train-1, sqrt(ncol_train), ncol_train/2))
-model <- train(group ~ ., data = wwTrain, method = "rf", trControl = trainControl(method = "repeatedcv", number=10, repeats = 1), tuneGrid =grid, metric="Accuracy")
-model_duplicated <- train(group ~ ., data = wwTrain_duplicated, method = "rf", trControl = trainControl(method = "repeatedcv", number=10, repeats = 1), tuneGrid =grid, metric="Accuracy")
+model <- train(group ~ ., data = wwTrain, method = "rf", trControl = trainControl(method = "repeatedcv", number=10, repeats = 3), tuneGrid =grid, metric="Accuracy")
+model_duplicated <- train(group ~ ., data = wwTrain_duplicated, method = "rf", trControl = trainControl(method = "repeatedcv", number=10, repeats = 33), tuneGrid =grid, metric="Accuracy")
 #simple models grid search
 grid_simple = expand.grid(cp = c(0.01, 0.001, 1, 0.1))
 model_simple <- train(group ~ ., data = wwTrain, method = "rpart", trControl = trainControl(method = "repeatedcv",number = 10, repeats = 3), metric="Accuracy", tuneGrid = grid_simple)
