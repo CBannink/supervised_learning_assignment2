@@ -116,93 +116,25 @@ get a better idea, we plotted quality score grouped boxplots for all
 variables.
 
 ```{r}
-box_alc <- white_wine %>% 
-  ggplot(aes(y = alcohol))+ 
-  geom_boxplot(fill = "sea green")+
-  facet_wrap(white_wine$quality, ncol = 7)+
-  labs(ylab = "alcohol %")+
-    theme(axis.text.x = element_blank())+
-  theme_minimal()
+make_box <- function(y_data, y_labs){
+  white_wine %>% ggplot(aes(y = y_data)) + 
+    geom_boxplot(fill = "sea green") +
+    facet_wrap(~quality, ncol = 7) +
+    ylab(y_labs) +
+    theme(axis.text.x = element_blank())
+}
 
-box_chl <- white_wine %>% 
-  ggplot(aes(y = chlorides))+ 
-  geom_boxplot(fill = "sea green")+
-  facet_wrap(white_wine$quality, ncol = 7)+
-  labs(ylab = "chlorides")+
-    theme(axis.text.x = element_blank())+
-  theme_minimal()
-
-box_free_so2 <- white_wine %>% 
-  ggplot(aes(y = free.sulfur.dioxide))+ 
-  geom_boxplot(fill = "sea green")+
-  facet_wrap(white_wine$quality, ncol = 7)+
-  labs(ylab = "Free sulfur dioxide")+
-    theme(axis.text.x = element_blank())+
-  theme_minimal()
-
-box_tot_so2 <- white_wine %>% 
-  ggplot(aes(y = total.sulfur.dioxide))+ 
-  geom_boxplot(fill = "sea green")+
-  facet_wrap(white_wine$quality, ncol = 7)+
-  labs(ylab = "Total sulfur dioxide")+
-    theme(axis.text.x = element_blank())+
-  theme_minimal()
-
-box_fix_acid <- white_wine %>% 
-  ggplot(aes(y = fixed.acidity))+ 
-  geom_boxplot(fill = "sea green")+
-  facet_wrap(white_wine$quality, ncol = 7)+
-  labs(ylab = "Fixed acidity")+
-    theme(axis.text.x = element_blank())+
-  theme_minimal()
-
-box_vol_acid <- white_wine %>% 
-  ggplot(aes(y = volatile.acidity))+ 
-  geom_boxplot(fill = "sea green")+
-  facet_wrap(white_wine$quality, ncol = 7)+
-  labs(ylab = "volatile acidity")+
-    theme(axis.text.x = element_blank())+
-  theme_minimal()
-
-box_cit_acid <- white_wine %>% 
-  ggplot(aes(y = citric.acid))+ 
-  geom_boxplot(fill = "sea green")+
-  facet_wrap(white_wine$quality, ncol = 7)+
-  labs(ylab = "Citric acid")+
-    theme(axis.text.x = element_blank())+
-  theme_minimal()
-
-box_res_sug <- white_wine %>% 
-  ggplot(aes(y = residual.sugar))+ 
-  geom_boxplot(fill = "sea green")+
-  facet_wrap(white_wine$quality, ncol = 7)+
-  labs(ylab = "Residual sugar")+
-    theme(axis.text.x = element_blank())+
-  theme_minimal()
-
-box_pH <- white_wine %>% 
-  ggplot(aes(y = pH))+ 
-  geom_boxplot(fill = "sea green")+
-  facet_wrap(white_wine$quality, ncol = 7)+
-  labs(ylab = "pH")+
-    theme(axis.text.x = element_blank())+
-  theme_minimal()
-
-box_dens <- white_wine %>% 
-  ggplot(aes(y = density))+ 
-  geom_boxplot(fill = "sea green")+
-  facet_wrap(white_wine$quality, ncol = 7)+
-  labs(ylab = "density")+
-    theme(axis.text.x = element_blank())+
-  theme_minimal()
-
-box_sulp <- white_wine %>% 
-  ggplot(aes(y = sulphates))+ 
-  geom_boxplot(fill = "sea green")+
-  facet_wrap(white_wine$quality, ncol = 7)+
-  labs(ylab = "Sulphates")+
-  theme(axis.text.x = element_blank())+
-  theme_minimal()
+box_alc <- make_box(white_wine$alcohol, "Alcohol %")
+box_chl <- make_box(white_wine$chlorides, "Ahlorides")
+box_free_so2 <- make_box(white_wine$free.sulfur.dioxide, "Free sulfur dioxide")
+box_tot_so2 <- make_box(white_wine$total.sulfur.dioxide, "Total sulfur dioxide")
+box_fix_acid <- make_box(white_wine$fixed.acidity, "Fixed acidity")
+box_vol_acid <- make_box(white_wine$volatile.acidity, "volatile acidity")
+box_cit_acid <- make_box(white_wine$citric.acid, "Citric acid")
+box_res_sug <- make_box(white_wine$residual.sugar, "Residual sugar")
+box_pH <- make_box(white_wine$pH, "pH")
+box_dens <- make_box(white_wine$density, "Density")
+box_sulp <- make_box(white_wine$sulphates, "Sulphates")
 
 fig2 <- ggarrange(box_cit_acid,box_vol_acid,box_fix_acid,box_tot_so2,box_free_so2, labels = c("F","G","H","I","J","K"), ncol = 3, nrow = 2)
 fig1 <- ggarrange(box_alc,box_dens, box_pH, box_chl,box_res_sug, box_sulp,labels = c("A","B","C","D","E"), ncol = 3, nrow = 2)
@@ -211,7 +143,7 @@ annotate_figure(fig1, top = text_grob("Boxplots of physiochemical properties of 
                 fig.lab = "Figure 1", fig.lab.face = "bold")
 
 annotate_figure(fig2, top = text_grob("Boxplots of physiochemical properties of wine",color = "black", face = "bold", size = 14),
-                fig.lab = "Figure 1", fig.lab.face = "bold")
+                fig.lab = "Figure 2", fig.lab.face = "bold")
 
 ```
 
@@ -227,94 +159,28 @@ white_wine <- white_wine %>%
   mutate(group = factor(ifelse(quality < 7, "Bad", "Good")))
 
 
+make_box_1 <- function(y_data, y_labs){
+  white_wine %>% ggplot(aes(y = y_data)) + 
+    geom_boxplot(fill = "sea green") +
+    facet_wrap(~group) +
+    ylab(y_labs) +
+    theme(axis.text.x = element_blank())
+}
 
-box_alc_1 <- white_wine %>% 
-  ggplot(aes(y = alcohol))+ 
-  geom_boxplot(fill = "sea green")+
-  facet_wrap(white_wine$group, ncol = 7)+
-  labs(ylab = "alcohol %")+
-    theme(axis.text.x = element_blank())+
-  theme_minimal()
 
-box_chl_1 <- white_wine %>% 
-  ggplot(aes(y = chlorides))+ 
-  geom_boxplot(fill = "sea green")+
-  facet_wrap(white_wine$group, ncol = 7)+
-  labs(ylab = "chlorides")+
-    theme(axis.text.x = element_blank())+
-  theme_minimal()
+box_alc_1 <- make_box_1(white_wine$alcohol, "alcohol %")
+box_chl_1 <- make_box_1(white_wine$chlorides, "chlorides")
+box_free_so2_1 <- make_box_1(white_wine$free.sulfur.dioxide, "Free sulfur dioxide")
+box_tot_so2_1 <- make_box_1(white_wine$total.sulfur.dioxide, "Total sulfur dioxide")
+box_fix_acid_1 <- make_box_1(white_wine$fixed.acidity, "Fixed acidity")
+box_vol_acid_1 <- make_box_1(white_wine$volatile.acidity, "volatile acidity")
+box_cit_acid_1 <- make_box_1(white_wine$citric.acid, "Citric acid")
+box_res_sug_1 <- make_box_1(white_wine$residual.sugar, "Residual sugar")
+box_pH_1 <- make_box_1(white_wine$pH, "pH")
+box_dens_1 <- make_box_1(white_wine$density, "Density")
+box_sulp_1 <- make_box_1(white_wine$sulphates, "Sulphates")
 
-box_free_so2_1 <- white_wine %>% 
-  ggplot(aes(y = free.sulfur.dioxide))+ 
-  geom_boxplot(fill = "sea green")+
-  facet_wrap(white_wine$group, ncol = 7)+
-  labs(ylab = "Free sulfur dioxide")+
-    theme(axis.text.x = element_blank())+
-  theme_minimal()
 
-box_tot_so2_1 <- white_wine %>% 
-  ggplot(aes(y = total.sulfur.dioxide))+ 
-  geom_boxplot(fill = "sea green")+
-  facet_wrap(white_wine$group, ncol = 7)+
-  labs(ylab = "Total sulfur dioxide")+
-    theme(axis.text.x = element_blank())+
-  theme_minimal()
-
-box_fix_acid_1 <- white_wine %>% 
-  ggplot(aes(y = fixed.acidity))+ 
-  geom_boxplot(fill = "sea green")+
-  facet_wrap(white_wine$group, ncol = 7)+
-  labs(ylab = "Fixed acidity")+
-    theme(axis.text.x = element_blank())+
-  theme_minimal()
-
-box_vol_acid_1 <- white_wine %>% 
-  ggplot(aes(y = volatile.acidity))+ 
-  geom_boxplot(fill = "sea green")+
-  facet_wrap(white_wine$group, ncol = 7)+
-  labs(ylab = "volatile acidity")+
-    theme(axis.text.x = element_blank())+
-  theme_minimal()
-
-box_cit_acid_1 <- white_wine %>% 
-  ggplot(aes(y = citric.acid))+ 
-  geom_boxplot(fill = "sea green")+
-  facet_wrap(white_wine$group, ncol = 7)+
-  labs(ylab = "Citric acid")+
-    theme(axis.text.x = element_blank())+
-  theme_minimal()
-
-box_res_sug_1 <- white_wine %>% 
-  ggplot(aes(y = residual.sugar))+ 
-  geom_boxplot(fill = "sea green")+
-  facet_wrap(white_wine$group, ncol = 7)+
-  labs(ylab = "Residual sugar")+
-    theme(axis.text.x = element_blank())+
-  theme_minimal()
-
-box_pH_1 <- white_wine %>% 
-  ggplot(aes(y = pH))+ 
-  geom_boxplot(fill = "sea green")+
-  facet_wrap(white_wine$group, ncol = 7)+
-  labs(ylab = "pH")+
-    theme(axis.text.x = element_blank())+
-  theme_minimal()
-
-box_dens_1 <- white_wine %>% 
-  ggplot(aes(y = density))+ 
-  geom_boxplot(fill = "sea green")+
-  facet_wrap(white_wine$group, ncol = 7)+
-  labs(ylab = "density")+
-    theme(axis.text.x = element_blank())+
-  theme_minimal()
-
-box_sulp_1 <- white_wine %>% 
-  ggplot(aes(y = sulphates))+ 
-  geom_boxplot(fill = "sea green")+
-  facet_wrap(white_wine$group, ncol = 7)+
-  labs(ylab = "Sulphates")+
-  theme(axis.text.x = element_blank())+
-  theme_minimal()
 
 fig2 <- ggarrange(box_cit_acid_1,box_vol_acid_1,box_fix_acid_1,box_tot_so2_1,box_free_so2_1, labels = c("F","G","H","I","J","K"), ncol = 3, nrow = 2)
 fig1 <- ggarrange(box_alc_1,box_dens_1, box_pH_1, box_chl_1,box_res_sug_1, box_sulp_1,labels = c("A","B","C","D","E"), ncol = 3, nrow = 2)
