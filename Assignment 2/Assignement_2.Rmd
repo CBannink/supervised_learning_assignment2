@@ -222,9 +222,9 @@ that is able to classify bad, neutral and good from eachother.
 
 ```{r}
 white_wine_duplicated <- white_wine %>% 
-  mutate(group = ifelse(quality < 6, "Bad", "Good"))
+  mutate(group = factor(ifelse(quality < 6, "Bad", "Good")))
 white_wine <- white_wine %>% 
-  mutate(group = ifelse(quality < 7, "Bad", "Good"))
+  mutate(group = factor(ifelse(quality < 7, "Bad", "Good")))
 
 
 
@@ -374,6 +374,7 @@ white_wine %>%
 ```
 
 ```{r}
+#caspar Bannink
 set.seed(123)
 white_wine <- white_wine %>% 
   select(!(quality)) 
@@ -394,60 +395,67 @@ white_wine_duplicated <- white_wine_duplicated %>%
 white_wine_duplicated <- white_wine_duplicated %>% 
   mutate(split = sample(c(rep("Test",653), rep("Train", 5885))))
 
-
-wwTrain <- white_wine %>% filter(split =="Train")
-wwTest <- white_wine %>% filter(split =="Test")
-wwTrain_duplicated <- white_wine_duplicated %>% filter(split =="Train")
-wwTest_duplicated <- white_wine_duplicated %>% filter(split =="Test")
-wwTrain = subset(wwTrain, select = -split)
-wwTest = subset(wwTest,select=-split)
-wwTrain_duplicated = subset(wwTrain_duplicated, select = -split)
-wwTest_duplicated = subset(wwTest_duplicated,select= -split)
-
+#all datasets (dataset with bad classification if <7 or <6 but with bad instances duplicated for even distribution)
+wwTrain <- white_wine %>% filter(split =="Train") %>%subset(select = -split)
+wwTest <- white_wine %>% filter(split =="Test") %>% subset(select=-split)
+wwTrain_duplicated <- white_wine_duplicated %>% filter(split =="Train") %>% subset(select = -split)
+wwTest_duplicated <- white_wine_duplicated %>% filter(split =="Test") %>% subset(select= -split)
 
 ncol_train = ncol(wwTrain)
 ncol_train_duplicated = ncol(wwTrain_duplicated)
 
+#complicated models first 2 random forest, train with gridsearch for best hyperparameter settings
 grid = expand.grid(mtry = c(ncol_train-1, sqrt(ncol_train), ncol_train/2))
-model <- train(group ~ ., data = wwTrain, method = "rf", trControl = trainControl(method = "repeatedcv", number=10, repeats = 3), tuneGrid =grid, metric="Accuracy")
-
-model_duplicated <- train(group ~ ., data = wwTrain_duplicated, method = "rf", trControl = trainControl(method = "repeatedcv", number=10, repeats = 3), tuneGrid =grid, metric="Accuracy")
-
+model <- train(group ~ ., data = wwTrain, method = "rf", trControl = trainControl(method = "repeatedcv", number=10, repeats = 1), tuneGrid =grid, metric="Accuracy")
+model_duplicated <- train(group ~ ., data = wwTrain_duplicated, method = "rf", trControl = trainControl(method = "repeatedcv", number=10, repeats = 1), tuneGrid =grid, metric="Accuracy")
+#simple models grid search
+grid_simple = expand.grid(cp = c(0.01, 0.001, 1, 0.1))
+model_simple <- train(group ~ ., data = wwTrain, method = "rpart", trControl = trainControl(method = "repeatedcv",number = 10, repeats = 3), metric="Accuracy", tuneGrid = grid_simple)
+model_simple_duplicated <- train(group ~ ., data = wwTrain_duplicated, method = "rpart", trControl = trainControl(method = "repeatedcv",number = 10, repeats = 3), metric="Accuracy", tuneGrid = grid_simple)
+#choose the best model with settings
 best_model <- model$finalModel
 best_model_duplicated = model_duplicated$finalModel
-
-predictions <- predict(best_model, wwTest)
-predictions_duplicated = predict(best_model_duplicated, wwTest_duplicated)
-
-accuracy <- mean(wwTest$group == predictions)
-accuracy_duplicated = mean(wwTest_duplicated$group == predictions_duplicated)
-accuracy
-accuracy_duplicated
-
-
-grid_simple = expand.grid(cp = c(0.01, 0.001, 1, 0.1))
-model_simple <- train(group ~ ., data = wwTrain, method = "rpart", trControl = trainControl(method = "repeatedcv",number = 10, repeats = 3,classProbs = FALSE), metric="Accuracy", tuneGrid = grid_simple)
-model_simple_duplicated <- train(group ~ ., data = wwTrain_duplicated, method = "rpart", trControl = trainControl(method = "repeatedcv",number = 10, repeats = 3,classProbs = FALSE), metric="Accuracy", tuneGrid = grid_simple)
-
 best_model_simple <- model_simple$finalModel
 best_model_simple_duplicated = model_simple_duplicated$finalModel
 
-predictions_simple <- predict(best_model_simple, wwTest)
-predictions_simple = data.frame(predictions_simple)
-result_df <- data.frame(matrix(ncol = 1, nrow = nrow(predictions_simple)))
-result_df$predicted_class <- ifelse(predictions_simple$Good >= 0.5, "Good", "Bad")# Assign classes based on the 
+#all models output probabilites, however, this is not of good use for comparing accuracies, we want correct classifications
+#this function converts probabilities to classes, threshold can be set to improve overal accuracy if (experiment)
+probToClass = function(pred){
+  pred = data.frame(pred)
+  result_df <- data.frame(predicted_class = ifelse(pred$Good >= 0.5, "Good", "Bad"))
+  return(result_df)
+}
 
-predictions_simple_duplicated <- predict(best_model_simple_duplicated, wwTest_duplicated)
-predictions_simple_duplicated = data.frame(predictions_simple_duplicated)
-result_df_duplicated <- data.frame(matrix(ncol = 1, nrow = nrow(predictions_simple_duplicated)))
-result_df_duplicated$predicted_class <- ifelse(predictions_simple_duplicated$Good >= 0.5, "Good", "Bad")# Assign classes based on the
+#convert classes and target classes to an accuracy measure
+getAcc = function(target_class, pred_class){
+  return(mean(target_class == pred_class))
+}
 
+predictions <- predict(best_model, wwTest)  
+predictions_duplicated = predict(best_model_duplicated, wwTest_duplicated) 
+predictions_simple <- predict(best_model_simple, wwTest)%>%probToClass()
+predictions_simple_duplicated <- predict(best_model_simple_duplicated, wwTest_duplicated)%>%probToClass()
 
-accuracy_simple <- mean(wwTest$group == result_df$predicted_class)
-accuracy_simple_duplicated = mean(wwTest_duplicated$group ==result_df_duplicated$predicted_class )
-accuracy_simple
-accuracy_simple_duplicated
-best_model_simple
-best_model
+getAcc(wwTest$group,predictions_simple$predicted_class) #accuracy of simple the model on dataset with good>7.0
+getAcc(wwTest$group,predictions) #accuracy of complex model good>7.0
+getAcc(wwTest_duplicated$group,predictions_simple_duplicated$predicted_class) #accuracy of the simple model with duplicated data
+getAcc(wwTest_duplicated$group,predictions_duplicated) #acc of complex model duplicated data
+
+model_confusion_matrix = confusionMatrix(predictions,wwTest$group) #confusion matrix complex model
+model_confusion_dubplicated = confusionMatrix(predictions_duplicated,wwTest_duplicated$group) #confusion matrix complex model duplicated
+factor_vector = c("Bad", "Good")
+predictions_simple$predicted_class = factor(predictions_simple$predicted_class,levels=factor_vector)
+wwTest$group = factor(wwTest$group,levels=factor_vector)
+wwTest_duplicated$group = factor(wwTest_duplicated$group,levels=factor_vector)
+predictions_simple_duplicated$predicted_class = factor(predictions_simple_duplicated$predicted_class,levels=factor_vector)
+
+simple_model_confusion_matrix = confusionMatrix(predictions_simple$predicted_class,wwTest$group) #confusion matrix simple model
+simple_model_confusion_matrix_duplicated = confusionMatrix(predictions_simple_duplicated$predicted_class,wwTest_duplicated$group) #confusion matrix simple model duplicated
+
+model_confusion_dubplicated
+model_confusion_matrix
+simple_model_confusion_matrix
+simple_model_confusion_matrix_duplicated
+
 
 ```
