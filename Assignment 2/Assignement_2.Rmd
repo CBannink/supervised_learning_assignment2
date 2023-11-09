@@ -78,6 +78,8 @@ of the differences in physiochemical properties between different
 quality-ratings, we summarized the medians of all variables grouped by
 quality.
 
+#Exploratory Data Analysis (EDA)
+
 ```{r}
 white_wine %>% 
   group_by(quality) %>% 
@@ -105,7 +107,7 @@ white_wine %>%
   geom_bar()+
   labs(xlab = "quality",
        ylab = "count",
-       title = "wine quality")+
+       title = "Distribution of wine quality")+
   theme_minimal()
   
 ```
@@ -150,7 +152,7 @@ annotate_figure(fig2, top = text_grob("Boxplots of physiochemical properties of 
 The boxplots show, that apart from alcohol percentage, there is not much
 difference going up or down single quality scores. Estimating quality
 accurate would be hard and unnecessary. Therefore, we will make a model
-that is able to classify bad, neutral and good from eachother.
+that is able to classify bad and good from each other.
 
 ```{r}
 white_wine_duplicated <- white_wine %>% 
@@ -189,7 +191,7 @@ annotate_figure(fig1, top = text_grob("Boxplots of physiochemical properties of 
                 fig.lab = "Figure 1", fig.lab.face = "bold")
 
 annotate_figure(fig2, top = text_grob("Boxplots of physiochemical properties of wine",color = "black", face = "bold", size = 14),
-                fig.lab = "Figure 1", fig.lab.face = "bold")
+                fig.lab = "Figure 2", fig.lab.face = "bold")
 
 ```
 
@@ -198,9 +200,23 @@ influences the quality of white wine based on visualization, we want to
 check whether their are strong correlations between our groups.
 
 ```{r}
-cor(white_wine[,c(1:12)])
-
+cor_matrix <- cor(white_wine[,c(1:12)])
+cor_matrix
 ```
+To better visualize the correlation between the features we construct a correlogram.
+
+
+```{r}
+corrplot(cor_matrix, type = "upper",  
+         method = "square",  
+         addCoef.col = "black", 
+         tl.cex = 0.6,
+         number.cex = 0.6,
+         tl.col = "black", tl.srt = 45,
+         )
+```
+
+ In the following plots we investigate relationships between different variables, and color points by quality for comparison.
 
 ```{r}
 white_wine %>% 
@@ -221,7 +237,7 @@ white_wine %>%
   geom_point()+
   scale_color_viridis()+
   labs(xlab = "volatile acidity",
-       ylab = "fixed acidity",
+       ylab = "Citric acidity",
        title = "Effect of acidity on quality")+
   theme_minimal()+ 
   facet_wrap(.~ group)
@@ -233,8 +249,8 @@ white_wine %>%
   geom_point(aes(alpha = 0.8))+
   scale_color_viridis()+
   labs(xlab = "density",
-       ylab = "chlorides",
-       title = "Effect of acidity on quality")+
+       ylab = "alcohol",
+       title = "Effect of alcohol % on quality")+
   theme_minimal()+ 
   facet_wrap(.~ group)
 ```
