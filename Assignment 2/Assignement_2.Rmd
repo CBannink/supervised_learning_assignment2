@@ -255,15 +255,31 @@ white_wine %>%
   facet_wrap(.~ group)
 ```
 
+#Simple model
+
+First we set a seed.
 ```{r}
 #caspar Bannink
 set.seed(123)
+```
+
+```{r}
+train <- 490/(44008+490)
+
+```
+
+
+Then we divide the data into a Train and a Test set, for which the proportion is 90% Train and 10% Test. 
+```{r}
 white_wine <- white_wine %>% 
   select(!(quality)) 
 white_wine <- white_wine %>% 
   mutate(split = sample(c(rep("Test",490), rep("Train", 4408))))
+```
 
 
+
+```{r}
 bad_indices <- which(white_wine_duplicated$group == "Bad")
 
 # Duplicate the "Bad" class instances
@@ -271,7 +287,7 @@ duplicated_data <- white_wine_duplicated[bad_indices, ]
 
 # Combine the duplicated instances with the original dataset
 balanced_data <- rbind(white_wine_duplicated, duplicated_data)
-white_wine_duplicated = balanced_data
+white_wine_duplicated <- balanced_data
 white_wine_duplicated <- white_wine_duplicated %>% 
   select(!(quality)) 
 white_wine_duplicated <- white_wine_duplicated %>% 
@@ -283,38 +299,46 @@ wwTest <- white_wine %>% filter(split =="Test") %>% subset(select=-split)
 wwTrain_duplicated <- white_wine_duplicated %>% filter(split =="Train") %>% subset(select = -split)
 wwTest_duplicated <- white_wine_duplicated %>% filter(split =="Test") %>% subset(select= -split)
 
-ncol_train = ncol(wwTrain)
-ncol_train_duplicated = ncol(wwTrain_duplicated)
+ncol_train <- ncol(wwTrain)
+ncol_train_duplicated <- ncol(wwTrain_duplicated)
+```
 
+#Complex model
+For the improvement of the simpler model we use two random forest models, which we train with gridsearch to find the best hyperparameter settings. 
+
+```{r}
 #complicated models first 2 random forest, train with gridsearch for best hyperparameter settings
-grid = expand.grid(mtry = c(ncol_train-1, sqrt(ncol_train), ncol_train/2))
+grid <- expand.grid(mtry = c(ncol_train-1, sqrt(ncol_train), ncol_train/2))
 model <- train(group ~ ., data = wwTrain, method = "rf", trControl = trainControl(method = "repeatedcv", number=10, repeats = 3), tuneGrid =grid, metric="Accuracy")
 model_duplicated <- train(group ~ ., data = wwTrain_duplicated, method = "rf", trControl = trainControl(method = "repeatedcv", number=10, repeats = 33), tuneGrid =grid, metric="Accuracy")
+
+
 #simple models grid search
-grid_simple = expand.grid(cp = c(0.01, 0.001, 1, 0.1))
-model_simple <- train(group ~ ., data = wwTrain, method = "rpart", trControl = trainControl(method = "repeatedcv",number = 10, repeats = 3), metric="Accuracy", tuneGrid = grid_simple)
+grid_simple <- expand.grid(cp = c(0.01, 0.001, 1, 0.1))
+model_simple <- train(group ~ ., data = wwTrain, method = "rpart", trControl = trainControl(method = "repeatedcv",number = 10, repeats = 3), metric = "Accuracy", tuneGrid = grid_simple)
 model_simple_duplicated <- train(group ~ ., data = wwTrain_duplicated, method = "rpart", trControl = trainControl(method = "repeatedcv",number = 10, repeats = 3), metric="Accuracy", tuneGrid = grid_simple)
+
 #choose the best model with settings
 best_model <- model$finalModel
-best_model_duplicated = model_duplicated$finalModel
+best_model_duplicated <- model_duplicated$finalModel
 best_model_simple <- model_simple$finalModel
-best_model_simple_duplicated = model_simple_duplicated$finalModel
+best_model_simple_duplicated <- model_simple_duplicated$finalModel
 
 #all models output probabilites, however, this is not of good use for comparing accuracies, we want correct classifications
 #this function converts probabilities to classes, threshold can be set to improve overal accuracy if (experiment)
-probToClass = function(pred){
-  pred = data.frame(pred)
+probToClass <- function(pred){
+  pred <- data.frame(pred)
   result_df <- data.frame(predicted_class = ifelse(pred$Good >= 0.5, "Good", "Bad"))
   return(result_df)
 }
 
 #convert classes and target classes to an accuracy measure
-getAcc = function(target_class, pred_class){
+getAcc <- function(target_class, pred_class){
   return(mean(target_class == pred_class))
 }
 
 predictions <- predict(best_model, wwTest)  
-predictions_duplicated = predict(best_model_duplicated, wwTest_duplicated) 
+predictions_duplicated <- predict(best_model_duplicated, wwTest_duplicated) 
 predictions_simple <- predict(best_model_simple, wwTest)%>%probToClass()
 predictions_simple_duplicated <- predict(best_model_simple_duplicated, wwTest_duplicated)%>%probToClass()
 
@@ -322,17 +346,23 @@ getAcc(wwTest$group,predictions_simple$predicted_class) #accuracy of simple the 
 getAcc(wwTest$group,predictions) #accuracy of complex model good>7.0
 getAcc(wwTest_duplicated$group,predictions_simple_duplicated$predicted_class) #accuracy of the simple model with duplicated data
 getAcc(wwTest_duplicated$group,predictions_duplicated) #acc of complex model duplicated data
+```
 
-model_confusion_matrix = confusionMatrix(predictions,wwTest$group) #confusion matrix complex model
-model_confusion_dubplicated = confusionMatrix(predictions_duplicated,wwTest_duplicated$group) #confusion matrix complex model duplicated
-factor_vector = c("Bad", "Good")
-predictions_simple$predicted_class = factor(predictions_simple$predicted_class,levels=factor_vector)
-wwTest$group = factor(wwTest$group,levels=factor_vector)
-wwTest_duplicated$group = factor(wwTest_duplicated$group,levels=factor_vector)
-predictions_simple_duplicated$predicted_class = factor(predictions_simple_duplicated$predicted_class,levels=factor_vector)
+To asses the performance of the models, we look at the confusion matrices. of both models.
 
-simple_model_confusion_matrix = confusionMatrix(predictions_simple$predicted_class,wwTest$group) #confusion matrix simple model
-simple_model_confusion_matrix_duplicated = confusionMatrix(predictions_simple_duplicated$predicted_class,wwTest_duplicated$group) #confusion matrix simple model duplicated
+```{r}
+#confusion matrix complex model
+model_confusion_matrix <- confusionMatrix(predictions,wwTest$group) 
+model_confusion_dubplicated <- confusionMatrix(predictions_duplicated,wwTest_duplicated$group) #confusion matrix complex model duplicated
+factor_vector <- c("Bad", "Good")
+predictions_simple$predicted_class <- factor(predictions_simple$predicted_class,levels=factor_vector)
+wwTest$group <- factor(wwTest$group,levels=factor_vector)
+wwTest_duplicated$group <- factor(wwTest_duplicated$group,levels=factor_vector)
+predictions_simple_duplicated$predicted_class <- factor(predictions_simple_duplicated$predicted_class,levels=factor_vector)
+
+#confusion matrix simple model
+simple_model_confusion_matrix <- confusionMatrix(predictions_simple$predicted_class,wwTest$group) 
+simple_model_confusion_matrix_duplicated <- confusionMatrix(predictions_simple_duplicated$predicted_class,wwTest_duplicated$group) #confusion matrix simple model duplicated
 
 model_confusion_dubplicated
 model_confusion_matrix
