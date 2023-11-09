@@ -21,6 +21,8 @@ library(rpart.plot)
 library(randomForest)
 library(magrittr)
 library(caret)
+library(corrplot)
+library(pROC)
 ```
 
 # Introducing the dataset
@@ -255,19 +257,13 @@ white_wine %>%
   facet_wrap(.~ group)
 ```
 
-#Simple model
+#Models
 
 First we set a seed.
 ```{r}
 #caspar Bannink
 set.seed(123)
 ```
-
-```{r}
-train <- 490/(44008+490)
-
-```
-
 
 Then we divide the data into a Train and a Test set, for which the proportion is 90% Train and 10% Test. 
 ```{r}
@@ -277,8 +273,7 @@ white_wine <- white_wine %>%
   mutate(split = sample(c(rep("Test",490), rep("Train", 4408))))
 ```
 
-
-
+As seen in the previous graph get an even distribution of the instances with quality group "Bad" and quality group "Good" we duplicate the instances of the group "Bad"
 ```{r}
 bad_indices <- which(white_wine_duplicated$group == "Bad")
 
@@ -303,28 +298,23 @@ ncol_train <- ncol(wwTrain)
 ncol_train_duplicated <- ncol(wwTrain_duplicated)
 ```
 
-#Complex model
-For the improvement of the simpler model we use two random forest models, which we train with gridsearch to find the best hyperparameter settings. 
+#Simple model
 
 ```{r}
-#complicated models first 2 random forest, train with gridsearch for best hyperparameter settings
-grid <- expand.grid(mtry = c(ncol_train-1, sqrt(ncol_train), ncol_train/2))
-model <- train(group ~ ., data = wwTrain, method = "rf", trControl = trainControl(method = "repeatedcv", number=10, repeats = 3), tuneGrid =grid, metric="Accuracy")
-model_duplicated <- train(group ~ ., data = wwTrain_duplicated, method = "rf", trControl = trainControl(method = "repeatedcv", number=10, repeats = 33), tuneGrid =grid, metric="Accuracy")
-
-
 #simple models grid search
 grid_simple <- expand.grid(cp = c(0.01, 0.001, 1, 0.1))
 model_simple <- train(group ~ ., data = wwTrain, method = "rpart", trControl = trainControl(method = "repeatedcv",number = 10, repeats = 3), metric = "Accuracy", tuneGrid = grid_simple)
 model_simple_duplicated <- train(group ~ ., data = wwTrain_duplicated, method = "rpart", trControl = trainControl(method = "repeatedcv",number = 10, repeats = 3), metric="Accuracy", tuneGrid = grid_simple)
+```
 
+```{r}
 #choose the best model with settings
-best_model <- model$finalModel
-best_model_duplicated <- model_duplicated$finalModel
 best_model_simple <- model_simple$finalModel
 best_model_simple_duplicated <- model_simple_duplicated$finalModel
+```
 
-#all models output probabilites, however, this is not of good use for comparing accuracies, we want correct classifications
+All models output probabilites, however, this is not of good use for comparing accuracies, we want correct classifications
+```{r}
 #this function converts probabilities to classes, threshold can be set to improve overal accuracy if (experiment)
 probToClass <- function(pred){
   pred <- data.frame(pred)
@@ -336,38 +326,94 @@ probToClass <- function(pred){
 getAcc <- function(target_class, pred_class){
   return(mean(target_class == pred_class))
 }
-
-predictions <- predict(best_model, wwTest)  
-predictions_duplicated <- predict(best_model_duplicated, wwTest_duplicated) 
-predictions_simple <- predict(best_model_simple, wwTest)%>%probToClass()
-predictions_simple_duplicated <- predict(best_model_simple_duplicated, wwTest_duplicated)%>%probToClass()
-
-getAcc(wwTest$group,predictions_simple$predicted_class) #accuracy of simple the model on dataset with good>7.0
-getAcc(wwTest$group,predictions) #accuracy of complex model good>7.0
-getAcc(wwTest_duplicated$group,predictions_simple_duplicated$predicted_class) #accuracy of the simple model with duplicated data
-getAcc(wwTest_duplicated$group,predictions_duplicated) #acc of complex model duplicated data
 ```
 
-To asses the performance of the models, we look at the confusion matrices. of both models.
+Predictions for the simple method
 
 ```{r}
-#confusion matrix complex model
-model_confusion_matrix <- confusionMatrix(predictions,wwTest$group) 
-model_confusion_dubplicated <- confusionMatrix(predictions_duplicated,wwTest_duplicated$group) #confusion matrix complex model duplicated
+predictions_simple <- predict(best_model_simple, wwTest) %>% probToClass()
+predictions_simple_duplicated <- predict(best_model_simple_duplicated, wwTest_duplicated) %>% probToClass()
+```
+
+Accuracy
+
+```{r}
+cat("Accuracy predictions simple model:", getAcc(wwTest$group,predictions_simple$predicted_class), "\n") #accuracy of simple the model on dataset with good>7.0
+cat("Accuracy predictions simple model with dublicates:", getAcc(wwTest_duplicated$group,predictions_simple_duplicated$predicted_class), "\n") #accuracy of the simple model with duplicated data
+```
+
+Confusion matrix
+
+```{r}
+#confusion matrix simple model
 factor_vector <- c("Bad", "Good")
 predictions_simple$predicted_class <- factor(predictions_simple$predicted_class,levels=factor_vector)
 wwTest$group <- factor(wwTest$group,levels=factor_vector)
 wwTest_duplicated$group <- factor(wwTest_duplicated$group,levels=factor_vector)
 predictions_simple_duplicated$predicted_class <- factor(predictions_simple_duplicated$predicted_class,levels=factor_vector)
 
-#confusion matrix simple model
 simple_model_confusion_matrix <- confusionMatrix(predictions_simple$predicted_class,wwTest$group) 
 simple_model_confusion_matrix_duplicated <- confusionMatrix(predictions_simple_duplicated$predicted_class,wwTest_duplicated$group) #confusion matrix simple model duplicated
 
-model_confusion_dubplicated
-model_confusion_matrix
 simple_model_confusion_matrix
 simple_model_confusion_matrix_duplicated
-
-
 ```
+With this confusion matrix we can plot a POC curve
+
+```{r}
+roc_simple <- roc(response = wwTest$group, predictor = as.numeric(predictions_simple$predicted_class == "Good"))
+plot(roc_simple, col = "blue", print.auc = TRUE, auc.polygon = TRUE, main = "ROC Curve - Simple Model")
+```
+
+
+
+
+#Complex model
+For the improvement of the simpler model we use two random forest models, which we train with gridsearch to find the best hyperparameter settings. 
+
+```{r}
+#complicated models first 2 random forest, train with gridsearch for best hyperparameter settings
+grid <- expand.grid(mtry = c(ncol_train-1, sqrt(ncol_train), ncol_train/2))
+model <- train(group ~ ., data = wwTrain, method = "rf", trControl = trainControl(method = "repeatedcv", number=10, repeats = 3), tuneGrid =grid, metric="Accuracy")
+model_duplicated <- train(group ~ ., data = wwTrain_duplicated, method = "rf", trControl = trainControl(method = "repeatedcv", number=10, repeats = 3), tuneGrid =grid, metric="Accuracy")
+```
+
+#choose the best model with settings
+```{r}
+best_model <- model$finalModel
+best_model_duplicated <- model_duplicated$finalModel
+```
+
+Predictions for the complex method
+
+```{r}
+predictions <- predict(best_model, wwTest)  
+predictions_duplicated <- predict(best_model_duplicated, wwTest_duplicated) 
+```
+
+Accuracy
+
+```{r}
+cat("Accuracy predictions complex model:", getAcc(wwTest$group,predictions), "\n") #accuracy of complex model good>7.0
+cat("Accuracy predictions complex model with duplicates:", getAcc(wwTest_duplicated$group,predictions_duplicated), "\n") #acc of complex model duplicated data
+```
+
+
+To asses the performance of the model, we look at the confusion matrix.
+
+```{r}
+#confusion matrix complex model
+model_confusion_matrix <- confusionMatrix(predictions,wwTest$group) 
+model_confusion_dubplicated <- confusionMatrix(predictions_duplicated,wwTest_duplicated$group) #confusion matrix complex model duplicated
+
+
+model_confusion_dubplicated
+model_confusion_matrix
+```
+With this confusion matrix we can plot a POC curve
+
+```{r}
+roc_complex <- roc(response = wwTest_duplicated$group, predictor = as.numeric(predictions_duplicated == "Good"))
+plot(roc_complex, col = "blue", print.auc = TRUE, auc.polygon = TRUE, main = "ROC Curve - Simple Model")
+```
+
