@@ -81,6 +81,7 @@ quality-ratings, we summarized the medians of all variables grouped by
 quality.
 
 #Exploratory Data Analysis (EDA)
+To gain insights into the dataset, we first performed exploratory data analysis. We created summary statistics, distribution plots, and boxplots to understand the distribution of quality ratings and the relationships between different physiochemical properties.
 
 ```{r}
 white_wine %>% 
@@ -198,8 +199,7 @@ annotate_figure(fig2, top = text_grob("Boxplots of physiochemical properties of 
 ```
 
 Since it is not possible to pinpoint a single feature that highly
-influences the quality of white wine based on visualization, we want to
-check whether their are strong correlations between our groups.
+influences the quality of white wine based on visualization, we explored the correlation matrix to understand the relationships between different physiochemical features.
 
 ```{r}
 cor_matrix <- cor(white_wine[,c(1:12)])
@@ -299,6 +299,7 @@ ncol_train_duplicated <- ncol(wwTrain_duplicated)
 ```
 
 #Simple model
+We started by building a simple model using a decision tree classifier. The dataset was split into training and testing sets, and the model was trained using 10-fold cross-validation.
 
 ```{r}
 #simple models grid search
@@ -358,7 +359,7 @@ simple_model_confusion_matrix_duplicated <- confusionMatrix(predictions_simple_d
 simple_model_confusion_matrix
 simple_model_confusion_matrix_duplicated
 ```
-With this confusion matrix we can plot a POC curve
+With this confusion matrix we can plot a POC curve. As can be seen in the plot the AUC is 0.735 for the simple model. 
 
 ```{r}
 roc_simple <- roc(response = wwTest$group, predictor = as.numeric(predictions_simple$predicted_class == "Good"))
@@ -416,4 +417,6 @@ With this confusion matrix we can plot a POC curve
 roc_complex <- roc(response = wwTest_duplicated$group, predictor = as.numeric(predictions_duplicated == "Good"))
 plot(roc_complex, col = "blue", print.auc = TRUE, auc.polygon = TRUE, main = "ROC Curve - Simple Model")
 ```
+#Conclusion
 
+In conclusion, both models were able to predict wine quality to some extent, with the complex model outperforming the simple model. The ROC curves and AUC values indicate the trade-off between sensitivity and specificity. 
