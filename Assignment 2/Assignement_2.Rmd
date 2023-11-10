@@ -80,8 +80,11 @@ of the differences in physiochemical properties between different
 quality-ratings, we summarized the medians of all variables grouped by
 quality.
 
-#Exploratory Data Analysis (EDA)
-To gain insights into the dataset, we first performed exploratory data analysis. We created summary statistics, distribution plots, and boxplots to understand the distribution of quality ratings and the relationships between different physiochemical properties.
+#Exploratory Data Analysis (EDA) To gain insights into the dataset, we
+first performed exploratory data analysis. We created summary
+statistics, distribution plots, and boxplots to understand the
+distribution of quality ratings and the relationships between different
+physiochemical properties.
 
 ```{r}
 white_wine %>% 
@@ -158,12 +161,11 @@ accurate would be hard and unnecessary. Therefore, we will make a model
 that is able to classify bad and good from each other.
 
 ```{r}
-white_wine_duplicated <- white_wine %>% 
-  mutate(group = factor(ifelse(quality < 6, "Bad", "Good")))
+# Group quality scores in good and bad levels.
 white_wine <- white_wine %>% 
-  mutate(group = factor(ifelse(quality < 7, "Bad", "Good")))
+  mutate(group = factor(ifelse(quality < 6, "Bad", "Good")))
 
-
+# Plot boxplots for different features based on quality group
 make_box_1 <- function(y_data, y_labs){
   white_wine %>% ggplot(aes(y = y_data)) + 
     geom_boxplot(fill = "sea green") +
@@ -199,14 +201,17 @@ annotate_figure(fig2, top = text_grob("Boxplots of physiochemical properties of 
 ```
 
 Since it is not possible to pinpoint a single feature that highly
-influences the quality of white wine based on visualization, we explored the correlation matrix to understand the relationships between different physiochemical features.
+influences the quality of white wine based on visualization, we explored
+the correlation matrix to understand the relationships between different
+physiochemical features.
 
 ```{r}
 cor_matrix <- cor(white_wine[,c(1:12)])
 cor_matrix
 ```
-To better visualize the correlation between the features we construct a correlogram.
 
+To better visualize the correlation between the features we construct a
+correlogram.
 
 ```{r}
 corrplot(cor_matrix, type = "upper",  
@@ -218,7 +223,8 @@ corrplot(cor_matrix, type = "upper",
          )
 ```
 
- In the following plots we investigate relationships between different variables, and color points by quality for comparison.
+In the following plots we investigate relationships between different
+variables, and color points by quality for comparison.
 
 ```{r}
 white_wine %>% 
@@ -257,24 +263,37 @@ white_wine %>%
   facet_wrap(.~ group)
 ```
 
-#Models
+# Data distribution with groups Good and Bad
 
-First we set a seed.
-```{r}
-#caspar Bannink
-set.seed(123)
-```
+In the common grading system of 1 to 10, a score below 6 would be seen
+as negative and anything above 5 would be seen as positive. For a
+classification job like this having many more datapoints in one group
+compared to the other results in a prediction bias towards the group
+with the most datapoints. Since our cut-off is between 5 and 6 the
+majority of the wines are considered good (Sup.fig 1A). The problem with
+this distribution is that when we train our model with this dataset,
+that its predictions will be biased towards "good". Since we would like
+to use this model to be sure no one will have to drink bad wines, we
+would rather be more careful providing good scores than to be generous
+in classifying a wine as good.
 
-Then we divide the data into a Train and a Test set, for which the proportion is 90% Train and 10% Test. 
+The two options we came up with are, #1 Keeping the cut-off score at
+(<6) and duplicating the wines that are considered bad and use this to
+train the model, or #2 Change the cut-off score to (<7). Option 1
+results makes the model more careful to grade a wine as good and will be
+more prone to score a wine as bad (Sup.fig 1B). Option 2 will make sure
+that the number of datapoints in the two group (bad and good) will be of
+similar sizes (Sup.fig 1C).
+
 ```{r}
+# Option 1 making the harder predictor "good", since most datapoints are considered bad wines in this case
 white_wine <- white_wine %>% 
-  select(!(quality)) 
-white_wine <- white_wine %>% 
-  mutate(split = sample(c(rep("Test",490), rep("Train", 4408))))
-```
+  mutate(group = factor(ifelse(quality < 7, "Bad", "Good")))
 
-As seen in the previous graph get an even distribution of the instances with quality group "Bad" and quality group "Good" we duplicate the instances of the group "Bad"
-```{r}
+# Option 2 duplicating the "Bad" grouped wines to correct for the skewness of the data. 
+white_wine_duplicated <- white_wine %>% 
+  mutate(group = factor(ifelse(quality < 6, "Bad", "Good")))
+
 bad_indices <- which(white_wine_duplicated$group == "Bad")
 
 # Duplicate the "Bad" class instances
@@ -283,6 +302,64 @@ duplicated_data <- white_wine_duplicated[bad_indices, ]
 # Combine the duplicated instances with the original dataset
 balanced_data <- rbind(white_wine_duplicated, duplicated_data)
 white_wine_duplicated <- balanced_data
+
+Original <- white_wine %>% 
+                ggplot(aes(x = quality))+ 
+                geom_bar(fill = "dark grey")+
+                labs(xlab = "quality",
+                     ylab = "count",
+                     title = "Distribution of wine quality scores")+
+                theme_minimal()
+
+Option1 <- white_wine_duplicated %>% 
+                    ggplot(aes(x = quality, fill = group))+ 
+                    geom_bar()+
+                    #facet_wrap(~group)+
+                    labs(xlab = "quality",
+                         ylab = "count",
+                         title = "After duplication of Bad group" )+
+                    theme_minimal()
+
+Option2 <- white_wine %>% 
+                ggplot(aes(x = quality, fill = group))+ 
+                geom_bar()+
+                #facet_wrap(~group)+
+                labs(xlab = "quality",
+                     ylab = "count",
+                     title = "After change of Good/Bad cut-off (<7)")+
+                theme_minimal()
+
+
+supp.fig1 <- ggarrange(Original, 
+                       ggarrange(Option1, Option2, labels = c("B","C"), ncol=2), nrow = 2, labels = "A")
+annotate_figure(supp.fig1, top = text_grob("Dataset distribution of white wines", color = "black", face = "bold", size = 14))
+```
+
+#Models
+
+First we set a seed.
+
+```{r}
+#caspar Bannink
+set.seed(123)
+```
+
+Then we divide the data into a Train and a Test set, for which the
+proportion is 90% Train and 10% Test.
+
+```{r}
+white_wine <- white_wine %>% 
+  select(!(quality)) 
+white_wine <- white_wine %>% 
+  mutate(split = sample(c(rep("Test",490), rep("Train", 4408))))
+```
+
+As seen in supplemental figure 1, to get an even distribution of the instances with quality group "Bad" and quality group "Good", we duplicated the
+instances of the group "Bad". In the code we will talk about two datasets. The dataset referred to as white_wine is the one with the cut-off at below 7, and the dataset called white_wine_duplicated is the dataset with a cut-off at below 6, but where we duplicated the wines in the bad quality group. 
+
+```{r}
+
+#Remove the quality score to prevent basing the classification on the quality score. 
 white_wine_duplicated <- white_wine_duplicated %>% 
   select(!(quality)) 
 white_wine_duplicated <- white_wine_duplicated %>% 
@@ -298,8 +375,10 @@ ncol_train <- ncol(wwTrain)
 ncol_train_duplicated <- ncol(wwTrain_duplicated)
 ```
 
-#Simple model
-We started by building a simple model using a decision tree classifier. The dataset was split into training and testing sets, and the model was trained using 10-fold cross-validation.
+#Simple model 
+We started by building a simple model using a decision
+tree classifier. The dataset was split into training and testing sets,
+and the model was trained using 10-fold cross-validation. Next to the 10-fold cross-validation, we performed a grid search for four different values of the complexity parameter on both datasets. 
 
 ```{r}
 #simple models grid search
@@ -314,7 +393,8 @@ best_model_simple <- model_simple$finalModel
 best_model_simple_duplicated <- model_simple_duplicated$finalModel
 ```
 
-All models output probabilites, however, this is not of good use for comparing accuracies, we want correct classifications
+The output of these models are probabilities that have to be converted to classifications. We have set the probability boundary at 0.5 after this calculated the accuracy of our models. 
+
 ```{r}
 #this function converts probabilities to classes, threshold can be set to improve overal accuracy if (experiment)
 probToClass <- function(pred){
@@ -359,18 +439,18 @@ simple_model_confusion_matrix_duplicated <- confusionMatrix(predictions_simple_d
 simple_model_confusion_matrix
 simple_model_confusion_matrix_duplicated
 ```
-With this confusion matrix we can plot a POC curve. As can be seen in the plot the AUC is 0.735 for the simple model. 
+
+With this confusion matrix we can plot a POC curve. As can be seen in
+the plot the AUC is 0.735 for the simple model.
 
 ```{r}
 roc_simple <- roc(response = wwTest$group, predictor = as.numeric(predictions_simple$predicted_class == "Good"))
 plot(roc_simple, col = "blue", print.auc = TRUE, auc.polygon = TRUE, main = "ROC Curve - Simple Model")
 ```
 
-
-
-
-#Complex model
-For the improvement of the simpler model we use two random forest models, which we train with gridsearch to find the best hyperparameter settings. 
+#Complex model 
+For the improvement of the simpler model we use two random forest models, which we train with gridsearch to find the best
+hyperparameter settings. The hyperparameter we optimized for is the total number of features taken into account with for each tree. We tried the total feature count minus one, half the total number of features, and the square root of the total number of features. 
 
 ```{r}
 #complicated models first 2 random forest, train with gridsearch for best hyperparameter settings
@@ -380,6 +460,26 @@ model_duplicated <- train(group ~ ., data = wwTrain_duplicated, method = "rf", t
 ```
 
 #choose the best model with settings
+We looked at the results for different mtry (number of features per tree in random forest) numbers and plotted the accuracy levels. As you can see, the different mtry levels did not influence the accuracy outcome much. This is caused by .........
+```{r}
+
+mtry1 <- model$results %>% 
+  ggplot(aes(x = mtry, y = Accuracy))+ 
+  geom_point()+
+  geom_smooth()+
+  theme_minimal()+
+  ylim(.8,.9)
+mtry2 <- model_duplicated$results %>% 
+  ggplot(aes(x = mtry, y = Accuracy))+
+  geom_point()+
+  geom_smooth()+
+  theme_minimal()+
+  ylim(.85,.95)
+
+mtry2
+fig3 <- ggarrange(mtry1,mtry2, labels = c("A","B"), ncol = 1, nrow = 2 )
+annotate_figure(fig3, top = text_grob("Hyperparameter gridsearch results", color = "black", face = "bold", size = 14))
+```
 ```{r}
 best_model <- model$finalModel
 best_model_duplicated <- model_duplicated$finalModel
@@ -399,7 +499,6 @@ cat("Accuracy predictions complex model:", getAcc(wwTest$group,predictions), "\n
 cat("Accuracy predictions complex model with duplicates:", getAcc(wwTest_duplicated$group,predictions_duplicated), "\n") #acc of complex model duplicated data
 ```
 
-
 To asses the performance of the model, we look at the confusion matrix.
 
 ```{r}
@@ -411,12 +510,17 @@ model_confusion_dubplicated <- confusionMatrix(predictions_duplicated,wwTest_dup
 model_confusion_dubplicated
 model_confusion_matrix
 ```
-With this confusion matrix we can plot a POC curve
+
+With this confusion matrix we can plot a ROC curve
 
 ```{r}
 roc_complex <- roc(response = wwTest_duplicated$group, predictor = as.numeric(predictions_duplicated == "Good"))
 plot(roc_complex, col = "blue", print.auc = TRUE, auc.polygon = TRUE, main = "ROC Curve - Simple Model")
 ```
+
 #Conclusion
 
-In conclusion, both models were able to predict wine quality to some extent, with the complex model outperforming the simple model. The ROC curves and AUC values indicate the trade-off between sensitivity and specificity. 
+In conclusion, both models were able to predict wine quality to some
+extent, with the complex model outperforming the simple model. The ROC
+curves and AUC values indicate the trade-off between sensitivity and
+specificity.
