@@ -275,7 +275,7 @@ white_wine %>%
   theme_minimal()+ 
   facet_wrap(.~ group)
 ```
-
+As shown in the correlogram, there is no strong correlation of a single feature with wine quality. The quality of the wine is multi-feature dependent. The only feature that stands out from the rest is alcohol percentage. But even alcohol percentage does not explain the quality score of white wine. To be able to predict wine quality groups we will have to use the majority of the features to accurately classify a wine sample.
 # Data distribution with groups Good and Bad
 
 In the common grading system of 1 to 10, a score below 6 would be seen
@@ -500,7 +500,7 @@ model_duplicated <- train(group ~ ., data = wwTrain_duplicated, method = "rf", t
 ```
 
 #choose the best model with settings
-We looked at the results for different mtry (number of features per tree in random forest) numbers and plotted the accuracy levels. As you can see, the different mtry levels did not influence the accuracy outcome much. This is caused by .........
+We looked at the results for different mtry (number of features per tree in random forest) numbers and plotted the accuracy levels. As you can see, the different mtry levels did not influence the accuracy outcome much. This is caused because we have a robust feature set, where each variable has a similar influence on the quality score and that the features are correlated with each other. This explains why using different mtry levels does not change much on the accuracy scores. 
 ```{r}
 
 mtry1 <- model$results %>% 
@@ -516,7 +516,7 @@ mtry2 <- model_duplicated$results %>%
   theme_minimal()+
   ylim(.85,.95)
 
-mtry2
+
 fig3 <- ggarrange(mtry1,mtry2, labels = c("A","B"), ncol = 1, nrow = 2 )
 annotate_figure(fig3, top = text_grob("Hyperparameter gridsearch results", color = "black", face = "bold", size = 14))
 ```
