@@ -165,7 +165,12 @@ that is able to classify bad and good from each other.
 white_wine <- white_wine %>% 
   mutate(group = factor(ifelse(quality < 6, "Bad", "Good")))
 
+
 # Plot boxplots for different features based on quality group
+
+
+
+
 make_box_1 <- function(y_data, y_labs){
   white_wine %>% ggplot(aes(y = y_data)) + 
     geom_boxplot(fill = "sea green") +
@@ -199,6 +204,14 @@ annotate_figure(fig2, top = text_grob("Boxplots of physiochemical properties of 
                 fig.lab = "Figure 2", fig.lab.face = "bold")
 
 ```
+
+```{r}
+number_bad <- white_wine %>% filter(group == "Bad") %>% nrow()
+number_good <- white_wine %>% filter(group == "Good") %>% nrow()
+number_bad
+number_good
+```
+
 
 Since it is not possible to pinpoint a single feature that highly
 influences the quality of white wine based on visualization, we explored
@@ -375,10 +388,17 @@ ncol_train <- ncol(wwTrain)
 ncol_train_duplicated <- ncol(wwTrain_duplicated)
 ```
 
+
 #Simple model 
 We started by building a simple model using a decision
 tree classifier. The dataset was split into training and testing sets,
 and the model was trained using 10-fold cross-validation. Next to the 10-fold cross-validation, we performed a grid search for four different values of the complexity parameter on both datasets. 
+
+
+#Simple model
+
+We started by building a simple model using a decision tree classifier. The dataset was split into training and testing sets, and the model was trained using 10-fold cross-validation.
+
 
 ```{r}
 #simple models grid search
@@ -393,7 +413,16 @@ best_model_simple <- model_simple$finalModel
 best_model_simple_duplicated <- model_simple_duplicated$finalModel
 ```
 
+
 The output of these models are probabilities that have to be converted to classifications. We have set the probability boundary at 0.5 after this calculated the accuracy of our models. 
+
+
+```{r}
+#rpart.plot(best_model_simple, main = "Decision Tree - Simple model")
+```
+
+
+All models output probabilites, however, this is not of good use for comparing accuracies, we want correct classifications
 
 ```{r}
 #this function converts probabilities to classes, threshold can be set to improve overal accuracy if (experiment)
@@ -416,6 +445,8 @@ predictions_simple <- predict(best_model_simple, wwTest) %>% probToClass()
 predictions_simple_duplicated <- predict(best_model_simple_duplicated, wwTest_duplicated) %>% probToClass()
 ```
 
+
+
 Accuracy
 
 ```{r}
@@ -426,7 +457,7 @@ cat("Accuracy predictions simple model with dublicates:", getAcc(wwTest_duplicat
 Confusion matrix
 
 ```{r}
-#confusion matrix simple model
+# confusion matrix simple model
 factor_vector <- c("Bad", "Good")
 predictions_simple$predicted_class <- factor(predictions_simple$predicted_class,levels=factor_vector)
 wwTest$group <- factor(wwTest$group,levels=factor_vector)
@@ -448,9 +479,18 @@ roc_simple <- roc(response = wwTest$group, predictor = as.numeric(predictions_si
 plot(roc_simple, col = "blue", print.auc = TRUE, auc.polygon = TRUE, main = "ROC Curve - Simple Model")
 ```
 
+
 #Complex model 
 For the improvement of the simpler model we use two random forest models, which we train with gridsearch to find the best
 hyperparameter settings. The hyperparameter we optimized for is the total number of features taken into account with for each tree. We tried the total feature count minus one, half the total number of features, and the square root of the total number of features. 
+
+
+
+
+
+#Complex model
+For the improvement of the simpler model we use two random forest models, which we train with gridsearch to find the best hyperparameter settings. 
+
 
 ```{r}
 #complicated models first 2 random forest, train with gridsearch for best hyperparameter settings
@@ -515,8 +555,19 @@ With this confusion matrix we can plot a ROC curve
 
 ```{r}
 roc_complex <- roc(response = wwTest_duplicated$group, predictor = as.numeric(predictions_duplicated == "Good"))
-plot(roc_complex, col = "blue", print.auc = TRUE, auc.polygon = TRUE, main = "ROC Curve - Simple Model")
+plot(roc_complex, col = "blue", print.auc = TRUE, auc.polygon = TRUE, main = "ROC Curve - Complex")
 ```
+
+
+#some ideas for plots
+
+The varImpPlot function is part of the randomForest package and is used to create a variable importance plot based on the Gini index. The Gini index measures the impurity of the node, and the importance of a variable is computed based on how much it contributes to decreasing the impurity across all the trees in the random forest.
+
+```{r}
+#varImpPlot(best_model_duplicated, main = "Variable Importance Plot")
+```
+
+
 
 #Conclusion
 
