@@ -25,25 +25,6 @@ library(corrplot)
 library(pROC)
 ```
 
-# Introducing the dataset
-
-To do:\
-- choose a dataset\
-- clean dataset - explain dataset - introduce what question we want to
-answer (so what is the dependent variable and are the independent
-variables)
-
-# Representing the data
-
-Content: make few interesting plots
-
-# Simple model
-
-To do: - Make a simple model - Explain model method (linear
-regression?) - Create confusion matrix - Explain de predictions (which
-are the truly true, falsly true etc) - Evaluate the performance of the
-model
-
 # Importing dataset
 
 ```{r}
@@ -59,53 +40,46 @@ summary(white_wine)
 
 # Introducing dataset
 
-This dataset from Cortez et al.,2009 contains information of 4898 types
-of white wine. For each wine, 12 measurements have been gathered and
-collected in this dataset. The dataset contains the following
-variables. - Fixed acidity, grams of tartaric acids per liter - Volatile
-acidity, grams of acetic acid per liter - citric acid, in gram per
-liter - residual sugar, the amount of leftover sugar in the wine bottle
-in gram per liter - chlorides, grams of sodium chloride per liter - free
-sulfur dioxides, in milligram per liter - total sulfur dioxides, in
-milligram per liter - density, is the grams per mililiter - pH, measure
-for the acidity of a wine. A pH below 7 meaning that it is considered
-acidic, a pH above 7 is considered basic. - sulphates, grams of
-potassium sulphate per liter - alcohol, percentage of alcohol of total
-wine volume. - quality, a number from 1 to 10 to rate the taste of wine
-based on triplicate blinde taste test.
+This dataset from Cortez et al.,2009 contains information of 4898 types of white wine. For each wine, 12 measurements have been gathered and collected in this dataset. The dataset contains the following variables:   
+- Fixed acidity, grams of tartaric acids per liter;   
+- Volatile acidity, grams of acetic acid per liter;   
+- citric acid, in gram per liter;  
+- residual sugar, the amount of leftover sugar in the wine bottle
+in gram per liter;   
+- chlorides, grams of sodium chloride per liter;   
+- free sulfur dioxides, in milligram per liter;   
+- total sulfur dioxides, in milligram per liter;   
+- density, is the grams per mililiter;   
+- pH, measure for the acidity of a wine. A pH below 7 meaning that it is considered
+acidic, a pH above 7 is considered basic;    
+- sulphates, grams of potassium sulphate per liter;   
+- alcohol, percentage of alcohol of total wine volume;   
+- quality, a number from 1 to 10 to rate the taste of wine based on triplicate blinde taste test.
 
-We want to be able to predict based on above described physiochemical
-properties whether a wine will be of good quality or not. To get an idea
-of the differences in physiochemical properties between different
-quality-ratings, we summarized the medians of all variables grouped by
-quality.
+We want to be able to predict based on above described physiochemical properties whether a wine will be of good quality or not. To get an idea of the differences in physiochemical properties between different quality-ratings, we summarized the medians of all variables grouped by quality.
 
-#Exploratory Data Analysis (EDA) To gain insights into the dataset, we
-first performed exploratory data analysis. We created summary
-statistics, distribution plots, and boxplots to understand the
-distribution of quality ratings and the relationships between different
-physiochemical properties.
+# Exploratory Data Analysis (EDA) 
+
+To gain insights into the dataset, we first performed exploratory data analysis. We created summary statistics, distribution plots, and boxplots to understand the distribution of quality ratings and the relationships between different physiochemical properties.
 
 ```{r}
-white_wine %>% 
-  group_by(quality) %>% 
-  summarise(n_observations = length(quality),
-            median_alcohol = median(alcohol),
-            median_chorides = median(chlorides),
-            median_density = median(density), 
-            median_pH = median(pH),
-            median_sulphates = median(sulphates), 
-            median_fixed_acidity = median(fixed.acidity),
-            median_volatile_acidity = median(volatile.acidity),
-            median_total.sulfur.dioxide = median(total.sulfur.dioxide),
-            median_free.sulfur.dioxide = median(free.sulfur.dioxide),
-            median_citric.acid = median(citric.acid),
-            median_residual.sugar = median(residual.sugar))
+# Function to calculate medians for multiple columns
+column_medians <- function(data, group_col, columns_to_median) {
+  result <- data %>%
+    group_by({{group_col}}) %>%
+    summarise(n_observations = n(),
+              across({{columns_to_median}}, median))
+  return(result)
+}
+
+# Vector with all columns names 
+propreties <- colnames(white_wine)[1:11]
+
+# Calculating the median of all propreties
+column_medians(white_wine, quality, propreties)
 ```
 
-The majority of wines are scored within 5-7 range. Only very few wines
-could be considered bad (3-4) and only few wines could be considered
-good (8-9) wines.
+The majority of wines are scored within 5-7 range. Only very few wines could be considered bad (3-4) and only few wines could be considered good (8-9) wines.
 
 ```{r}
 white_wine %>% 
@@ -118,12 +92,13 @@ white_wine %>%
   
 ```
 
-Based on the table with median values grouped by quality score, we do
-not have a clear idea of what influences the quality of white wines. To
-get a better idea, we plotted quality score grouped boxplots for all
+On this distribution plot, we can see that most wine are rated 6, many are rated 5 or 7. Very few wines are considered really good (8-9) or really bad (3-4).   
+
+Based on the table with median values grouped by quality score, we do not have a clear idea of what influences the quality of white wines. To get a better idea, we plotted quality score grouped boxplots for all
 variables.
 
 ```{r}
+# Function to create boxplot
 make_box <- function(y_data, y_labs){
   white_wine %>% ggplot(aes(y = y_data)) + 
     geom_boxplot(fill = "sea green") +
@@ -132,6 +107,7 @@ make_box <- function(y_data, y_labs){
     theme(axis.text.x = element_blank())
 }
 
+# Plotting all boxplots
 box_alc <- make_box(white_wine$alcohol, "Alcohol %")
 box_chl <- make_box(white_wine$chlorides, "Ahlorides")
 box_free_so2 <- make_box(white_wine$free.sulfur.dioxide, "Free sulfur dioxide")
@@ -147,18 +123,14 @@ box_sulp <- make_box(white_wine$sulphates, "Sulphates")
 fig2 <- ggarrange(box_cit_acid,box_vol_acid,box_fix_acid,box_tot_so2,box_free_so2, labels = c("F","G","H","I","J","K"), ncol = 3, nrow = 2)
 fig1 <- ggarrange(box_alc,box_dens, box_pH, box_chl,box_res_sug, box_sulp,labels = c("A","B","C","D","E"), ncol = 3, nrow = 2)
 
-annotate_figure(fig1, top = text_grob("Boxplots of physiochemical properties of wine",color = "black", face = "bold", size = 14),
-                fig.lab = "Figure 1", fig.lab.face = "bold")
+annotate_figure(fig1, top = text_grob("Boxplots of physiochemical properties of wine",color = "black", face = "bold", size = 14), fig.lab = "Figure 1", fig.lab.face = "bold")
 
-annotate_figure(fig2, top = text_grob("Boxplots of physiochemical properties of wine",color = "black", face = "bold", size = 14),
-                fig.lab = "Figure 2", fig.lab.face = "bold")
+annotate_figure(fig2, top = text_grob("Boxplots of physiochemical properties of wine",color = "black", face = "bold", size = 14), fig.lab = "Figure 2", fig.lab.face = "bold")
 
 ```
 
-The boxplots show, that apart from alcohol percentage, there is not much
-difference going up or down single quality scores. Estimating quality
-accurate would be hard and unnecessary. Therefore, we will make a model
-that is able to classify bad and good from each other.
+The boxplots show, that apart from alcohol percentage, there is not much difference going up or down single quality scores. Estimating quality accurate would be hard and unnecessary. Therefore, we will make a model
+that is able to classify bad and good from each other.   
 
 ```{r}
 # Group quality scores in good and bad levels.
@@ -167,10 +139,6 @@ white_wine <- white_wine %>%
 
 
 # Plot boxplots for different features based on quality group
-
-
-
-
 make_box_1 <- function(y_data, y_labs){
   white_wine %>% ggplot(aes(y = y_data)) + 
     geom_boxplot(fill = "sea green") +
@@ -212,19 +180,14 @@ number_bad
 number_good
 ```
 
-
-Since it is not possible to pinpoint a single feature that highly
-influences the quality of white wine based on visualization, we explored
-the correlation matrix to understand the relationships between different
-physiochemical features.
+Since it is not possible to pinpoint a single feature that highly influences the quality of white wine based on visualization, we explored the correlation matrix to understand the relationships between different physiochemical features.
 
 ```{r}
 cor_matrix <- cor(white_wine[,c(1:12)])
 cor_matrix
 ```
 
-To better visualize the correlation between the features we construct a
-correlogram.
+To better visualize the correlation between the features we construct a correlogram.
 
 ```{r}
 corrplot(cor_matrix, type = "upper",  
@@ -236,8 +199,7 @@ corrplot(cor_matrix, type = "upper",
          )
 ```
 
-In the following plots we investigate relationships between different
-variables, and color points by quality for comparison.
+In the following plots we investigate relationships between different variables, and color points by quality for comparison.
 
 ```{r}
 white_wine %>% 
@@ -276,34 +238,19 @@ white_wine %>%
   facet_wrap(.~ group)
 ```
 As shown in the correlogram, there is no strong correlation of a single feature with wine quality. The quality of the wine is multi-feature dependent. The only feature that stands out from the rest is alcohol percentage. But even alcohol percentage does not explain the quality score of white wine. To be able to predict wine quality groups we will have to use the majority of the features to accurately classify a wine sample.
+
 # Data distribution with groups Good and Bad
 
-In the common grading system of 1 to 10, a score below 6 would be seen
-as negative and anything above 5 would be seen as positive. For a
-classification job like this having many more datapoints in one group
-compared to the other results in a prediction bias towards the group
-with the most datapoints. Since our cut-off is between 5 and 6 the
-majority of the wines are considered good (Sup.fig 1A). The problem with
-this distribution is that when we train our model with this dataset,
-that its predictions will be biased towards "good". Since we would like
-to use this model to be sure no one will have to drink bad wines, we
-would rather be more careful providing good scores than to be generous
-in classifying a wine as good.
+In the common grading system of 1 to 10, a score below 6 would be seen as negative and anything above 5 would be seen as positive. For a classification job like this having many more datapoints in one group compared to the other results in a prediction bias towards the group with the most datapoints. Since our cut-off is between 5 and 6 the majority of the wines are considered good (Sup.fig 1A). The problem with this distribution is that when we train our model with this dataset, that its predictions will be biased towards "good". Since we would like to use this model to be sure no one will have to drink bad wines, we would rather be more careful providing good scores than to be generous in classifying a wine as good.
 
-The two options we came up with are, #1 Keeping the cut-off score at
-(<6) and duplicating the wines that are considered bad and use this to
-train the model, or #2 Change the cut-off score to (<7). Option 1
-results makes the model more careful to grade a wine as good and will be
-more prone to score a wine as bad (Sup.fig 1B). Option 2 will make sure
-that the number of datapoints in the two group (bad and good) will be of
-similar sizes (Sup.fig 1C).
+The two options we came up with are, #1 Keeping the cut-off score at (<6) and duplicating the wines that are considered bad and use this to train the model, or #2 Change the cut-off score to (<7). Option 1 results makes the model more careful to grade a wine as good and will be more prone to score a wine as bad (Sup.fig 1B). Option 2 will make sure that the number of datapoints in the two group (bad and good) will be of similar sizes (Sup.fig 1C).
 
 ```{r}
 # Option 1 making the harder predictor "good", since most datapoints are considered bad wines in this case
 white_wine <- white_wine %>% 
   mutate(group = factor(ifelse(quality < 7, "Bad", "Good")))
 
-# Option 2 duplicating the "Bad" grouped wines to correct for the skewness of the data. 
+# Option 2 duplicating the "Bad" grouped wines to correct for the skewness of the data 
 white_wine_duplicated <- white_wine %>% 
   mutate(group = factor(ifelse(quality < 6, "Bad", "Good")))
 
@@ -343,26 +290,24 @@ Option2 <- white_wine %>%
                 theme_minimal()
 
 
-supp.fig1 <- ggarrange(Original, 
-                       ggarrange(Option1, Option2, labels = c("B","C"), ncol=2), nrow = 2, labels = "A")
+supp.fig1 <- ggarrange(Original, ggarrange(Option1, Option2, labels = c("B","C"), ncol=2), nrow = 2, labels = "A")
 annotate_figure(supp.fig1, top = text_grob("Dataset distribution of white wines", color = "black", face = "bold", size = 14))
 ```
 
-#Models
+# Models
 
 First we set a seed.
 
 ```{r}
-#caspar Bannink
 set.seed(123)
 ```
 
-Then we divide the data into a Train and a Test set, for which the
-proportion is 90% Train and 10% Test.
+Then we divide the data into a Train and a Test set, for which the proportion is 90% Train and 10% Test.
 
 ```{r}
 white_wine <- white_wine %>% 
   select(!(quality)) 
+
 white_wine <- white_wine %>% 
   mutate(split = sample(c(rep("Test",490), rep("Train", 4408))))
 ```
@@ -371,7 +316,6 @@ As seen in supplemental figure 1, to get an even distribution of the instances w
 instances of the group "Bad". In the code we will talk about two datasets. The dataset referred to as white_wine is the one with the cut-off at below 7, and the dataset called white_wine_duplicated is the dataset with a cut-off at below 6, but where we duplicated the wines in the bad quality group. 
 
 ```{r}
-
 #Remove the quality score to prevent basing the classification on the quality score. 
 white_wine_duplicated <- white_wine_duplicated %>% 
   select(!(quality)) 
@@ -389,13 +333,9 @@ ncol_train_duplicated <- ncol(wwTrain_duplicated)
 ```
 
 
-#Simple model 
+# Simple model 
 
 We started by building a simple model using a decision tree classifier. The dataset was split into training and testing sets, and the model was trained using 10-fold cross-validation. We chose a decision tree for the simplicity and interpretability. The model's performance is optimized through a grid search, exploring different complexity parameter values (cp). The complexity parameter helps control the tree's complexity, preventing overfitting. The grid search is performed with 10-fold cross-validation, ensuring a reliable evaluation of the model's accuracy. This approach aims to find a balanced model that is both accurate and generalizable to new data.
-
-
-#Simple model
-
 
 ```{r}
 #simple models grid search
@@ -409,7 +349,6 @@ model_simple_duplicated <- train(group ~ ., data = wwTrain_duplicated, method = 
 best_model_simple <- model_simple$finalModel
 best_model_simple_duplicated <- model_simple_duplicated$finalModel
 ```
-
 
 The output of these models are probabilities that have to be converted to classifications. We have set the probability boundary at 0.5 after this calculated the accuracy of our models. 
 
@@ -427,22 +366,21 @@ getAcc <- function(target_class, pred_class){
 }
 ```
 
-Predictions for the simple method
+### Predictions for the simple method
 
 ```{r}
 predictions_simple <- predict(best_model_simple, wwTest) %>% probToClass()
 predictions_simple_duplicated <- predict(best_model_simple_duplicated, wwTest_duplicated) %>% probToClass()
 ```
 
-
-Accuracy
+### Accuracy
 
 ```{r}
 cat("Accuracy predictions simple model:", getAcc(wwTest$group,predictions_simple$predicted_class), "\n") #accuracy of simple the model on dataset with good>7.0
 cat("Accuracy predictions simple model with dublicates:", getAcc(wwTest_duplicated$group,predictions_simple_duplicated$predicted_class), "\n") #accuracy of the simple model with duplicated data
 ```
 
-Confusion matrix
+### Confusion matrix
 
 ```{r}
 # confusion matrix simple model
@@ -464,6 +402,9 @@ With this confusion matrix we can plot a POC curve. The ROC curve displayed for 
 ```{r}
 roc_simple <- roc(response = wwTest$group, predictor = as.numeric(predictions_simple$predicted_class == "Good"))
 plot(roc_simple, col = "blue", print.auc = TRUE, auc.polygon = TRUE, main = "ROC Curve - Simple Model")
+
+roc_simple_duplicated <- roc(response = wwTest_duplicated$group, predictor = as.numeric(predictions_simple_duplicated$predicted_class == "Good"))
+plot(roc_simple_duplicated, col = "blue", print.auc = TRUE, auc.polygon = TRUE, main = "ROC Curve - Simple Model")
 ```
 
 ```{r}
@@ -475,22 +416,11 @@ plot(var_importance, main = "Variable Importance Plot")
 ```
 This plot gives an interesting view on the relative importance of each feature on de predictions of the simple model. From this plot, 'alcohol' seems to be the most important factor, followed by 'density' and 'chlorides'. Other properties like 'fixed.acidity' and 'citric.acid' have lower importance scores, suggesting they have less influence on the model's predictions.
 
+# Complex model 
 
-
-
-#Complex model 
-For the improvement of the simpler model we use two random forest models, which we train with gridsearch to find the best
-hyperparameter settings. The hyperparameter we optimized for is the total number of features taken into account with for each tree. We tried the total feature count minus one, half the total number of features, and the square root of the total number of features. 
-
-
-
-
-
-#Complex model
-To improve our basic decision tree to a more complex predictive framework we implemented two Random Forest models. These models, which operate by constructing numerous decision trees and aggregating their outcomes, offer an improvement in handling the complexities of wine quality prediction. We use grid search techniques to optimize the hyperparameter settings, such as the number of trees in the forest, the depth of each tree, and the minimum number of samples required to split a node.ensuring our model achieves optimal performance through the best configuration of its estimators.
+To improve our basic decision tree to a more complex predictive framework we implemented two Random Forest models. These models, which operate by constructing numerous decision trees and aggregating their outcomes, offer an improvement in handling the complexities of wine quality prediction. We use grid search techniques to optimize the hyperparameter settings, such as the number of trees in the forest, the depth of each tree, and the minimum number of samples required to split a node.ensuring our model achieves optimal performance through the best configuration of its estimators. The hyperparameter we optimized for is the total number of features taken into account with for each tree. We tried the total feature count minus one, half the total number of features, and the square root of the total number of features. 
 
 Furthermore, Random Forest models offer insights into feature importance, similar to the simple model, but with an added layer of complexity. They consider not only the individual predictive strength of each feature but also how features perform in conjunction with one another. This can reveal interaction effects that a single decision tree might miss.
-
 
 ```{r}
 #complicated models first 2 random forest, train with gridsearch for best hyperparameter settings
@@ -499,8 +429,9 @@ model <- train(group ~ ., data = wwTrain, method = "rf", trControl = trainContro
 model_duplicated <- train(group ~ ., data = wwTrain_duplicated, method = "rf", trControl = trainControl(method = "repeatedcv", number=10, repeats = 3), tuneGrid =grid, metric="Accuracy")
 ```
 
-#choose the best model with settings
-We looked at the results for different mtry (number of features per tree in random forest) numbers and plotted the accuracy levels. As you can see, the different mtry levels did not influence the accuracy outcome much. This is caused because we have a robust feature set, where each variable has a similar influence on the quality score and that the features are correlated with each other. This explains why using different mtry levels does not change much on the accuracy scores. 
+### Choose the best model with settings
+
+We looked at the results for different mtry (number of features per tree in random forest) numbers and plotted the accuracy levels. As you can see, the different mtry levels did not influence the accuracy outcome much. This can be explained by the fact that we have a robust feature set, where each variable has a similar influence on the quality score and that the features are correlated with each other. This explains why using different mtry levels does not change much on the accuracy scores. 
 ```{r}
 
 mtry1 <- model$results %>% 
@@ -509,6 +440,7 @@ mtry1 <- model$results %>%
   geom_smooth()+
   theme_minimal()+
   ylim(.8,.9)
+
 mtry2 <- model_duplicated$results %>% 
   ggplot(aes(x = mtry, y = Accuracy))+
   geom_point()+
@@ -520,19 +452,20 @@ mtry2 <- model_duplicated$results %>%
 fig3 <- ggarrange(mtry1,mtry2, labels = c("A","B"), ncol = 1, nrow = 2 )
 annotate_figure(fig3, top = text_grob("Hyperparameter gridsearch results", color = "black", face = "bold", size = 14))
 ```
+
 ```{r}
 best_model <- model$finalModel
 best_model_duplicated <- model_duplicated$finalModel
 ```
 
-Predictions for the complex method
+### Predictions for the complex method
 
 ```{r}
 predictions <- predict(best_model, wwTest)  
 predictions_duplicated <- predict(best_model_duplicated, wwTest_duplicated) 
 ```
 
-Accuracy
+### Accuracy
 
 ```{r}
 cat("Accuracy predictions complex model:", getAcc(wwTest$group,predictions), "\n") #accuracy of complex model good>7.0
@@ -546,9 +479,8 @@ To asses the performance of the model, we look at the confusion matrix.
 model_confusion_matrix <- confusionMatrix(predictions,wwTest$group) 
 model_confusion_dubplicated <- confusionMatrix(predictions_duplicated,wwTest_duplicated$group) #confusion matrix complex model duplicated
 
-
-model_confusion_dubplicated
 model_confusion_matrix
+model_confusion_dubplicated
 ```
 
 With this confusion matrix we can plot a ROC curve. 
@@ -556,11 +488,12 @@ With this confusion matrix we can plot a ROC curve.
 ```{r}
 roc_complex <- roc(response = wwTest$group, predictor = as.numeric(predictions == "Good"))
 plot(roc_complex, col = "blue", print.auc = TRUE, auc.polygon = TRUE, main = "ROC Curve - Complex")
+
+roc_complex_duplicated <- roc(response = wwTest_duplicated$group, predictor = as.numeric(predictions_duplicated == "Good"))
+plot(roc_complex_duplicated, col = "blue", print.auc = TRUE, auc.polygon = TRUE, main = "ROC Curve - Complex (duplicated)")
 ```
+
 The ROC curve for the complex model presents a significant improvement in diagnostic ability, as evidenced by an AUC of 0.825. This value, which is closer to 1, indicates a strong ability to correctly classify wines as either good or not good. The curve itself rises quickly towards the top-left corner, which represents an ideal model with perfect sensitivity and specificity. This rapid ascent shows that the complex model has a high true positive rate and manages to maintain a low false positive rate across various threshold levels. Such a profile suggests that the model is efficient in distinguishing between the classes with a high degree of accuracy. When compared to the simple model's AUC of 0.735, the increase to 0.825 in the complex model reflects a substantial improvement in predictive performance. This improvement signifies the complex model's advanced capability to handle the details of the dataset, likely due to its ability to model complex, non-linear relationships and interactions between variables that a simple decision tree may not capture.
-
-
-
 
 ```{r}
 # Get variable importance
@@ -569,16 +502,15 @@ var_importance <- varImp(model)
 # Plot variable importance
 plot(var_importance, main = "Variable Importance Plot")
 ```
+
 The feature importance plot from the complex model, indicates that 'alcohol' remains the most influential variable in predicting wine quality, mirroring the findings of the simpler decision tree model. This suggests a consistent trend across models where the alcohol content is a key determinant of quality. 'Density' and 'pH' also appear as significant, but their roles seem less important in the complex model compared to 'alcohol'.
 
 In comparison to the simple model's variable importance plot, we observe a more balanced distribution of importance among the features in the complex model. This likely reflects the Random Forest's ability to capture interactions between variables, leading to a more nuanced understanding of the factors that contribute to wine quality. For example, while 'chlorides' and 'volatile acidity' were more prominent in the simple model, they appear to have a reduced singular impact in the complex model, hinting at the complicated relationships the Random Forest considers.
 
+# Conclusion
 
+In conclusion, both models were able to predict wine quality to some extent, with the complex model outperforming the simple model. 
 
+If we consider the first dataset (where the cutoff was set at 7), the accuracy of the model was improved from 0.85 to 0.91 and the AUC value from 0.735 to 0.825. In the simple model, 28 wines were wrongly classified good and 44 were wrongly classified bad. On the other hand, in the complex model, 15 wines were wrongly classified good and 30 were wrongly classified bad.
 
-#Conclusion
-
-In conclusion, both models were able to predict wine quality to some
-extent, with the complex model outperforming the simple model. The ROC
-curves and AUC values indicate the trade-off between sensitivity and
-specificity.
+If we consider the second dataset (where the amount the datapoints of the bad wine where duplicated), the accuracy of the model was improved from 0.78 to 0.94 and the AUC value from 0.787 to 0.946. In the simple model, 71 wines were wrongly classified good and 68 were wrongly classified bad. On the other hand, in the complex model, 6 wines were wrongly classified good and 30 were wrongly classified bad.
