@@ -390,14 +390,11 @@ ncol_train_duplicated <- ncol(wwTrain_duplicated)
 
 
 #Simple model 
-We started by building a simple model using a decision
-tree classifier. The dataset was split into training and testing sets,
-and the model was trained using 10-fold cross-validation. Next to the 10-fold cross-validation, we performed a grid search for four different values of the complexity parameter on both datasets. 
+
+We started by building a simple model using a decision tree classifier. The dataset was split into training and testing sets, and the model was trained using 10-fold cross-validation. We chose a decision tree for the simplicity and interpretability. The model's performance is optimized through a grid search, exploring different complexity parameter values (cp). The complexity parameter helps control the tree's complexity, preventing overfitting. The grid search is performed with 10-fold cross-validation, ensuring a reliable evaluation of the model's accuracy. This approach aims to find a balanced model that is both accurate and generalizable to new data.
 
 
 #Simple model
-
-We started by building a simple model using a decision tree classifier. The dataset was split into training and testing sets, and the model was trained using 10-fold cross-validation.
 
 
 ```{r}
@@ -415,14 +412,6 @@ best_model_simple_duplicated <- model_simple_duplicated$finalModel
 
 
 The output of these models are probabilities that have to be converted to classifications. We have set the probability boundary at 0.5 after this calculated the accuracy of our models. 
-
-
-```{r}
-#rpart.plot(best_model_simple, main = "Decision Tree - Simple model")
-```
-
-
-All models output probabilites, however, this is not of good use for comparing accuracies, we want correct classifications
 
 ```{r}
 #this function converts probabilities to classes, threshold can be set to improve overal accuracy if (experiment)
@@ -444,7 +433,6 @@ Predictions for the simple method
 predictions_simple <- predict(best_model_simple, wwTest) %>% probToClass()
 predictions_simple_duplicated <- predict(best_model_simple_duplicated, wwTest_duplicated) %>% probToClass()
 ```
-
 
 
 Accuracy
@@ -471,13 +459,23 @@ simple_model_confusion_matrix
 simple_model_confusion_matrix_duplicated
 ```
 
-With this confusion matrix we can plot a POC curve. As can be seen in
-the plot the AUC is 0.735 for the simple model.
+With this confusion matrix we can plot a POC curve. The ROC curve displayed for the simple model provides a visual representation of the model's diagnostic ability to distinguish between the two classes of wine quality: "Good" and "Bad". The AUC (Area Under the Curve) value of 0.735 indicates a good predictive capability, which is above the threshold of 0.5 that would represent a model performing no better than random chance.
 
 ```{r}
 roc_simple <- roc(response = wwTest$group, predictor = as.numeric(predictions_simple$predicted_class == "Good"))
 plot(roc_simple, col = "blue", print.auc = TRUE, auc.polygon = TRUE, main = "ROC Curve - Simple Model")
 ```
+
+```{r}
+# Get variable importance
+var_importance <- varImp(model_simple)
+
+# Plot variable importance
+plot(var_importance, main = "Variable Importance Plot")
+```
+This plot gives an interesting view on the relative importance of each feature on de predictions of the simple model. From this plot, 'alcohol' seems to be the most important factor, followed by 'density' and 'chlorides'. Other properties like 'fixed.acidity' and 'citric.acid' have lower importance scores, suggesting they have less influence on the model's predictions.
+
+
 
 
 #Complex model 
@@ -489,7 +487,9 @@ hyperparameter settings. The hyperparameter we optimized for is the total number
 
 
 #Complex model
-For the improvement of the simpler model we use two random forest models, which we train with gridsearch to find the best hyperparameter settings. 
+To improve our basic decision tree to a more complex predictive framework we implemented two Random Forest models. These models, which operate by constructing numerous decision trees and aggregating their outcomes, offer an improvement in handling the complexities of wine quality prediction. We use grid search techniques to optimize the hyperparameter settings, such as the number of trees in the forest, the depth of each tree, and the minimum number of samples required to split a node.ensuring our model achieves optimal performance through the best configuration of its estimators.
+
+Furthermore, Random Forest models offer insights into feature importance, similar to the simple model, but with an added layer of complexity. They consider not only the individual predictive strength of each feature but also how features perform in conjunction with one another. This can reveal interaction effects that a single decision tree might miss.
 
 
 ```{r}
@@ -551,21 +551,28 @@ model_confusion_dubplicated
 model_confusion_matrix
 ```
 
-With this confusion matrix we can plot a ROC curve
+With this confusion matrix we can plot a ROC curve. 
 
 ```{r}
-roc_complex <- roc(response = wwTest_duplicated$group, predictor = as.numeric(predictions_duplicated == "Good"))
+roc_complex <- roc(response = wwTest$group, predictor = as.numeric(predictions == "Good"))
 plot(roc_complex, col = "blue", print.auc = TRUE, auc.polygon = TRUE, main = "ROC Curve - Complex")
 ```
+The ROC curve for the complex model presents a significant improvement in diagnostic ability, as evidenced by an AUC of 0.825. This value, which is closer to 1, indicates a strong ability to correctly classify wines as either good or not good. The curve itself rises quickly towards the top-left corner, which represents an ideal model with perfect sensitivity and specificity. This rapid ascent shows that the complex model has a high true positive rate and manages to maintain a low false positive rate across various threshold levels. Such a profile suggests that the model is efficient in distinguishing between the classes with a high degree of accuracy. When compared to the simple model's AUC of 0.735, the increase to 0.825 in the complex model reflects a substantial improvement in predictive performance. This improvement signifies the complex model's advanced capability to handle the details of the dataset, likely due to its ability to model complex, non-linear relationships and interactions between variables that a simple decision tree may not capture.
 
 
-#some ideas for plots
 
-The varImpPlot function is part of the randomForest package and is used to create a variable importance plot based on the Gini index. The Gini index measures the impurity of the node, and the importance of a variable is computed based on how much it contributes to decreasing the impurity across all the trees in the random forest.
 
 ```{r}
-#varImpPlot(best_model_duplicated, main = "Variable Importance Plot")
+# Get variable importance
+var_importance <- varImp(model)
+
+# Plot variable importance
+plot(var_importance, main = "Variable Importance Plot")
 ```
+The feature importance plot from the complex model, indicates that 'alcohol' remains the most influential variable in predicting wine quality, mirroring the findings of the simpler decision tree model. This suggests a consistent trend across models where the alcohol content is a key determinant of quality. 'Density' and 'pH' also appear as significant, but their roles seem less important in the complex model compared to 'alcohol'.
+
+In comparison to the simple model's variable importance plot, we observe a more balanced distribution of importance among the features in the complex model. This likely reflects the Random Forest's ability to capture interactions between variables, leading to a more nuanced understanding of the factors that contribute to wine quality. For example, while 'chlorides' and 'volatile acidity' were more prominent in the simple model, they appear to have a reduced singular impact in the complex model, hinting at the complicated relationships the Random Forest considers.
+
 
 
 
