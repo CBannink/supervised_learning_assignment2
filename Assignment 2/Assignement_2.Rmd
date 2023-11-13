@@ -27,10 +27,12 @@ library(pROC)
 
 # Importing dataset
 
-```{r}
+```{r, results="hide"}
 # Importing datasets 
 red_wine <- read.csv("wine+quality/winequality-red.csv", sep = ";")
-white_wine <- read.csv("wine+quality/winequality-white.csv", sep = ";") %>% mutate(quality = as.factor(quality))
+white_wine <- read.csv("wine+quality/winequality-white.csv", sep = ";") 
+white_wine %>%  
+  mutate(quality = as.factor(quality))
 ```
 
 ```{r}
