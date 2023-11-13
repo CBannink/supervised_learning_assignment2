@@ -10,7 +10,7 @@ editor_options:
 
 Libraries:
 
-```{r}
+```{r, message=FALSE}
 library(ggplot2)
 library(tidyverse) 
 library(viridis)
@@ -30,8 +30,7 @@ library(pROC)
 ```{r}
 # Importing datasets 
 red_wine <- read.csv("wine+quality/winequality-red.csv", sep = ";")
-white_wine <- read.csv("wine+quality/winequality-white.csv", sep = ";")
-white_wine %>%  mutate(quality = as.factor(quality))
+white_wine <- read.csv("wine+quality/winequality-white.csv", sep = ";") %>% mutate(quality = as.factor(quality))
 ```
 
 ```{r}
@@ -62,7 +61,7 @@ We want to be able to predict based on above described physiochemical properties
 
 To gain insights into the dataset, we first performed exploratory data analysis. We created summary statistics, distribution plots, and boxplots to understand the distribution of quality ratings and the relationships between different physiochemical properties.
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 # Function to calculate medians for multiple columns
 column_medians <- function(data, group_col, columns_to_median) {
   result <- data %>%
@@ -237,6 +236,7 @@ white_wine %>%
   theme_minimal()+ 
   facet_wrap(.~ group)
 ```
+
 As shown in the correlogram, there is no strong correlation of a single feature with wine quality. The quality of the wine is multi-feature dependent. The only feature that stands out from the rest is alcohol percentage. But even alcohol percentage does not explain the quality score of white wine. To be able to predict wine quality groups we will have to use the majority of the features to accurately classify a wine sample.
 
 # Data distribution with groups Good and Bad
@@ -414,6 +414,7 @@ var_importance <- varImp(model_simple)
 # Plot variable importance
 plot(var_importance, main = "Variable Importance Plot")
 ```
+
 This plot gives an interesting view on the relative importance of each feature on de predictions of the simple model. From this plot, 'alcohol' seems to be the most important factor, followed by 'density' and 'chlorides'. Other properties like 'fixed.acidity' and 'citric.acid' have lower importance scores, suggesting they have less influence on the model's predictions.
 
 # Complex model 
@@ -422,7 +423,7 @@ To improve our basic decision tree to a more complex predictive framework we imp
 
 Furthermore, Random Forest models offer insights into feature importance, similar to the simple model, but with an added layer of complexity. They consider not only the individual predictive strength of each feature but also how features perform in conjunction with one another. This can reveal interaction effects that a single decision tree might miss.
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 #complicated models first 2 random forest, train with gridsearch for best hyperparameter settings
 grid <- expand.grid(mtry = c(ncol_train-1, sqrt(ncol_train), ncol_train/2))
 model <- train(group ~ ., data = wwTrain, method = "rf", trControl = trainControl(method = "repeatedcv", number=10, repeats = 3), tuneGrid =grid, metric="Accuracy")
@@ -432,7 +433,7 @@ model_duplicated <- train(group ~ ., data = wwTrain_duplicated, method = "rf", t
 ### Choose the best model with settings
 
 We looked at the results for different mtry (number of features per tree in random forest) numbers and plotted the accuracy levels. As you can see, the different mtry levels did not influence the accuracy outcome much. This can be explained by the fact that we have a robust feature set, where each variable has a similar influence on the quality score and that the features are correlated with each other. This explains why using different mtry levels does not change much on the accuracy scores. 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 
 mtry1 <- model$results %>% 
   ggplot(aes(x = mtry, y = Accuracy))+ 
